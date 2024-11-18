@@ -75,26 +75,30 @@ int main()
 
     stringstream input(R"(
 
+        // Начало
         int x = 0;
         float f = 0.0;
         const float F_F3 = 5.25;
 
         if (x == 0)
         {
-            f = 3.;
+            f = 3./2;
         }
 
         else
         {
-            f = .25;
+            f = .25*3^6;
         }
 
+        /*
+        Цикл
+        */
         while (true)
         {
             ;
         }
 
-        print F_F3;            
+        print "str";            
 
     )");
 
@@ -114,8 +118,7 @@ int main()
 
         else if (mode == ScanMode::Read)
         {
-            if (!getChar(input, buf))
-                mode = ScanMode::Shutdown;
+            if (!getChar(input, buf)) break;
 
             if (TEXT_SEPARATORS.contains(buf)) continue;
 
@@ -183,7 +186,58 @@ int main()
         }
 
         else if (buf == '/')
-            flush(WordType::Operator, out);
+        {
+            if (getChar(input, buf))
+            {
+                if (buf == '/')
+                {
+                    /*
+                    out << buf;
+
+                    flush(WordType::Separator, out);
+                    */
+
+                    out.str("");
+
+                    while (getChar(input, buf) && buf != '\n');
+                }
+
+                else if (buf == '*')
+                {
+                    /*
+                    out << buf;
+
+                    flush(WordType::Separator, out);
+                    */
+
+                    out.str("");
+
+                    comment:
+
+                    while (getChar(input, buf) && buf != '*');
+
+                    if (getChar(input, buf) && buf == '/')
+                    {
+                        /*
+                        out << '*' << buf;
+
+                        flush(WordType::Separator, out);
+                        */
+                    }
+
+                    else goto comment;
+                }
+
+                else
+                {
+                    flush(WordType::Operator, out);
+
+                    out << buf;
+
+                    mode = ScanMode::Skip;
+                }
+            }
+        }
 
         else if (buf == '%')
             flush(WordType::Operator, out);
@@ -959,6 +1013,15 @@ int main()
 
                 mode = ScanMode::Skip;
             }
+        }
+
+        else if (buf == '"')
+        {
+            while (getChar(input, buf) && buf != '"')
+                out << buf;
+
+            out << buf;
+            flush(WordType::Literal, out);
         }
     }
 }
