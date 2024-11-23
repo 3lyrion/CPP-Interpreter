@@ -1,0 +1,27 @@
+
+bool finish = false;
+float sum = 5.0;
+const float FACTOR = .2.;
+string str = "Abcdef";
+int count;
+count = 0;
+
+if (sum % 2 == 0)
+{
+}
+else
+{
+    sum=0;
+}
+
+while (finish == false)
+{
+    sum = 5+(sum+10.0) * -FACTOR^1.5;
+    count = count + 1;
+    finish = !(count > 100 || sum <= 1 && sum >= 0);	
+}
+
+{
+print "Result";
+print sum;
+}

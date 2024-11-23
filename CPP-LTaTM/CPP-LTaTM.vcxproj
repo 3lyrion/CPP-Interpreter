@@ -118,6 +118,8 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>Precompiled.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -134,6 +136,8 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>Precompiled.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,6 +148,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CPP-LTaTM.cpp" />
+    <ClCompile Include="DFA.cpp" />
+    <ClCompile Include="Lexer.cpp" />
+    <ClCompile Include="LexerRegex.cpp" />
+    <ClCompile Include="Old.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="DFA.hpp" />
+    <ClInclude Include="Lexer.hpp" />
+    <ClInclude Include="Precompiled.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
