@@ -32,13 +32,13 @@ int main()
 
     )")*/;
 
-    Lexer lexer("input.txt");
-    auto result = lexer.tokenize();
+    /*Lexer lexer("input.txt");
+    Parser parser(lexer);
+    parser.parse();*/
 
-    if (!result.success) return EXIT_FAILURE;
-
-    Parser parser;
-    parser.parse(result.tokens);
+    auto lexer = make_unique<Lexer>("input.txt");
+    auto parser = make_unique<Parser>(*lexer);
+    parser->parse();
 
     /*
     auto& tokens = lexer.tokenize();

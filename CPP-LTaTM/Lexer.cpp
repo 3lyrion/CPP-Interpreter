@@ -59,7 +59,7 @@ Lexer::Lexer(filesystem::path srcPath) :
 	initDFA();
 }
 
-Lexer::Result Lexer::tokenize()
+vector<Token> const& Lexer::tokenize()
 {
 	bool parsingOneLineComment = false;
 	bool parsingMultiLineComment = false;
@@ -155,24 +155,24 @@ Lexer::Result Lexer::tokenize()
 				}
 
 				if (m_keywords.contains(lexem))
-					m_tokens.emplace(TokenType::Keyword, lexem);
+					m_tokens.emplace_back(TokenType::Keyword, lexem);
 
 				else if (m_regex_float.Process(lexem))
-					m_tokens.emplace(TokenType::FloatLiteral, lexem);
+					m_tokens.emplace_back(TokenType::FloatLiteral, lexem);
 
 				else if (m_regex_int.Process(lexem))
-					m_tokens.emplace(TokenType::IntLiteral, lexem);
+					m_tokens.emplace_back(TokenType::IntLiteral, lexem);
 
 				else if (m_regex_id.Process(lexem))
-					m_tokens.emplace(TokenType::Id, lexem);
+					m_tokens.emplace_back(TokenType::Id, lexem);
 
 				else if (m_regex_string.Process(lexem))
 				{
 					if (lexem.length() == 2)
-						m_tokens.emplace(TokenType::StringLiteral, "");
+						m_tokens.emplace_back(TokenType::StringLiteral, "");
 
 					else
-						m_tokens.emplace(TokenType::StringLiteral, string(lexem.begin() + 1, lexem.end() - 1));
+						m_tokens.emplace_back(TokenType::StringLiteral, string(lexem.begin() + 1, lexem.end() - 1));
 				}
 						
 				lexem = "";
@@ -188,36 +188,23 @@ Lexer::Result Lexer::tokenize()
 
 			if (separatorSwitch == 0 || separatorSwitch == 2)
 			{
-				if (lexem == "(")
+				if (lexem == "{") 
 				{
-					m_tokens.emplace(TokenType::Separator, "(");
-					lexem = "";
-				}
-
-				else if (lexem == ")")
-				{
-					m_tokens.emplace(TokenType::Separator, ")");
-					lexem = "";
-
-				}
-				
-				else if (lexem == "{") 
-				{
-					m_tokens.emplace(TokenType::Separator, "{");
+					m_tokens.emplace_back(TokenType::Separator, "{");
 					lexem = "";
 
 				} 
 				
 				else if (lexem == "}")
 				{
-					m_tokens.emplace(TokenType::Separator, "}");
+					m_tokens.emplace_back(TokenType::Separator, "}");
 					lexem = "";
 
 				} 
 				
 				else if (lexem == ";")
 				{
-					m_tokens.emplace(TokenType::Separator, ";");
+					m_tokens.emplace_back(TokenType::Separator, ";");
 					lexem = "";
 				}
 
@@ -245,7 +232,7 @@ Lexer::Result Lexer::tokenize()
 
 				else if (m_operators.contains(lexem) && !m_compounds.contains(lexem + c))
 				{
-					m_tokens.emplace(TokenType::Operator, lexem);
+					m_tokens.emplace_back(TokenType::Operator, lexem);
 					lexem = "";
 				}
 
@@ -292,10 +279,10 @@ Lexer::Result Lexer::tokenize()
 		printf("ќшибка (стр. %zu, с. %zu) : ", m_currentLine, m_currentChar);
 		cerr << error << '\n';
 
-		return { false, m_tokens };
+		throw runtime_error("");
 	}
 
-	return { true, m_tokens };
+	return m_tokens;
 	
 }
 

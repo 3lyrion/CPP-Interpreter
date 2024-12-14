@@ -8,39 +8,24 @@ concept TokenT = std::is_same<T, TokenType>::value;
 class Parser
 {
 public:
-	Parser() = default;
+	Parser(Lexer& theLexer);
 
-	void parse(queue<Token> const& tokens);
-
-private:
-	queue<Token> m_tokens;
-
-	Token m_token;
+	void parse();
 
 private:
-	void nextToken();
+	Lexer& lexer;
 
-	Token& peek();
+	vector<Token> const* tokens = nullptr;
+	Token         const* token  = nullptr;
+
+	size_t m_index = 0;
+
+private:
+	void seek(size_t offset = 1);
+
+	Token const& peek();
 
 	void eat(TokenType type);
-
-	template <TokenT... Args>
-	void eat(Args... types)
-	{
-		for (auto type : types)
-		{
-			if (m_token.type == type)
-			{
-				nextToken();
-
-				return;
-			}
-		}
-
-		throw runtime_error("Неожиданный токен");
-	}
-
-	void seek(TokenType type);
 
 private:
 	void program();

@@ -33,20 +33,9 @@ public:
 class Lexer
 {
 public:
-	struct Result
-	{
-		bool success = false;
-
-		queue<Token> const& tokens;
-
-		Result(bool success_, queue<Token> const& tokens_) :
-			success (success_),
-			tokens  (tokens_) { }
-	};
-
 	Lexer(filesystem::path srcPath);
 
-	Result tokenize();
+	vector<Token> const& tokenize();
 	
 	inline static string tokenTypeToString(TokenType type)
 	{
@@ -82,7 +71,7 @@ private:
 	size_t m_currentChar      = 0;
 	size_t m_commentStartLine = 0;
 
-	queue<Token> m_tokens;
+	vector<Token> m_tokens;
 
 	unordered_set<string> m_keywords;
 	unordered_set<string> m_operators;

@@ -1,10 +1,21 @@
 #include "Parser.h"
 
-void Parser::parse(queue<Token> const& tokens)
+Parser::Parser(Lexer& theLexer) : 
+	lexer(theLexer)
 {
-	m_tokens = tokens;
 
-	try { program(); cout << "УСПЕХ\n"; }
+}
+
+void Parser::parse()
+{
+	try 
+	{
+		tokens = &lexer.tokenize();
+
+		program();
+		
+		cout << token->value << "\n";
+	}
 	catch (string& e)
 	{
 		if (e == "Конец")
@@ -19,47 +30,53 @@ void Parser::parse(queue<Token> const& tokens)
 	}
 }
 
-void Parser::nextToken()
+void Parser::seek(size_t offset)
 {
-	if (m_tokens.empty())
+	if (m_index > tokens->size() - 1)
 		throw "Конец";
 
-	m_token = m_tokens.front();
-	m_tokens.pop();
+	token = &(*tokens)[m_index];
+
+	m_index += offset;
 }
 
-Token& Parser::peek()
+Token const& Parser::peek()
 {
-	return m_tokens.front();
+	if (m_index > tokens->size() - 1)
+		throw "Конец";
+
+	return (*tokens)[m_index];
 }
 
 void Parser::eat(TokenType type)
 {
-	if (m_token.type == type)
-		nextToken();
+	seek();
 
-	else throw runtime_error("Неожиданный токен");
-}
-
-void Parser::seek(TokenType type)
-{
-	nextToken();
-	eat(type);
+	if (token->type != type)
+		throw runtime_error("Неожиданный токен");
 }
 
 void Parser::program()
 {
 	while (true)
 	{
+		auto index = m_index;
+
 		try { declaration(); }
 		catch (...)
 		{
+			m_index = index;
+
 			try { statement(); }
 			catch (...)
 			{
+				m_index = index;
+
 				try { block(); }
 				catch (...)
 				{
+					m_index = index;
+
 					return;
 				}
 			}
@@ -69,41 +86,45 @@ void Parser::program()
 
 void Parser::declaration()
 {
+	auto index = m_index;
+
 	try
 	{
 		typeSpec();
 
-		seek(TokenType::Id);
+		eat(TokenType::Id);
 
 		auto& tk = peek();
 		if (tk.value == "=")
 		{
-			nextToken();
+			m_index++;
 
 			expression();
 		}
 
-		seek(TokenType::Separator);
-		if (m_token.value == ";")
+		eat(TokenType::Separator);
+		if (token->value == ";")
 			return;
 	}
 
 	catch (...)
 	{
-		seek(TokenType::Keyword);
-		if (m_token.value == "const")
+		m_index = index;
+
+		eat(TokenType::Keyword);
+		if (token->value == "const")
 		{
 			typeSpec();
 
-			seek(TokenType::Id);
+			eat(TokenType::Id);
 
-			seek(TokenType::Operator);
-			if (m_token.value == "=")
+			eat(TokenType::Operator);
+			if (token->value == "=")
 			{
 				expression();
 
-				seek(TokenType::Separator);
-				if (m_token.value == ";")
+				eat(TokenType::Separator);
+				if (token->value == ";")
 					return;
 			}
 		}
@@ -114,8 +135,8 @@ void Parser::declaration()
 
 void Parser::typeSpec()
 {
-	seek(TokenType::Keyword);
-	auto& v = m_token.value;
+	eat(TokenType::Keyword);
+	auto& v = token->value;
 	if (v == "bool" || v == "float" || v == "int" || v == "string")
 		return;
 
@@ -130,7 +151,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "||")
 	{
-		nextToken();
+		m_index++;
 
 		goto begin;
 	}
@@ -146,7 +167,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "&&")
 	{
-		nextToken();
+		m_index++;
 
 		goto begin;
 	}
@@ -162,7 +183,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "==" || v == "!=")
 	{
-		nextToken();
+		m_index++;
 
 		goto begin;
 	}
@@ -178,7 +199,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "<" || v == ">" || v == "<=" || v == ">=")
 	{
-		nextToken();
+		m_index++;
 
 		goto begin;
 	}
@@ -194,7 +215,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "+" || v == "-")
 	{
-		nextToken();
+		m_index++;
 
 		goto begin;
 	}
@@ -210,7 +231,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "*" || v == "/" || v == "%")
 	{
-		nextToken();
+		m_index++;
 
 		goto begin;
 	}
@@ -226,7 +247,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "^")
 	{
-		nextToken();
+		m_index++;
 
 		goto begin;
 	}
@@ -239,60 +260,60 @@ void Parser::operand()
 	auto& v = peek().value;
 	if (v == "-" || v == "!")
 	{
-		nextToken();
+		m_index++;
 	}
 
-	nextToken();
+	auto& tk = peek();
 
-	auto t = m_token.type;
-
-	if (m_token.value == "(")
+	if (tk.value == "(")
 	{
+		m_index++;
+
 		expression();
 
-		seek(TokenType::Separator);
-		if (m_token.value == ")")
+		eat(TokenType::Operator);
+		if (token->value == ")")
 			return;
 	}
 
-	else if (t == TokenType::Id)
+	else if (tk.type == TokenType::Id)
 	{
+		m_index++;
+
 		return;
 	}
 
-	else if (t == TokenType::FloatLiteral || t == TokenType::IntLiteral || t == TokenType::StringLiteral)
+	else
 	{
-		return;
+		literal();
 	}
-
-	throw runtime_error("");
 }
 
 void Parser::literal()
 {
-	nextToken();
+	seek();
 
-	if (m_token.type == TokenType::FloatLiteral)
+	if (token->type == TokenType::FloatLiteral)
 	{
 		return;
 	}
 
-	if (m_token.type == TokenType::IntLiteral)
+	if (token->type == TokenType::IntLiteral)
 	{
 		return;
 	}
 
-	if (m_token.type == TokenType::StringLiteral)
+	if (token->type == TokenType::StringLiteral)
 	{
 		return;
 	}
 
-	if (m_token.value == "true")
+	if (token->value == "true")
 	{
 		return;
 	}
 
-	if (m_token.value == "false")
+	if (token->value == "false")
 	{
 		return;
 	}
@@ -302,46 +323,52 @@ void Parser::literal()
 
 void Parser::statement()
 {
+	auto index = m_index;
+
 	try { selStmt(); }
 	catch (...)
 	{
+		m_index = index;
+
 		try { iterStmt(); }
 		catch (...)
 		{
+			m_index = index;
+
 			try { printStmt(); }
 			catch (...)
 			{
+				m_index = index;
+
 				try { exprStmt(); }
 				catch (...)
 				{
-		
+					throw runtime_error("");
 				}
 			}
 		}
 	}
-
-	throw runtime_error("");
 }
 
 void Parser::selStmt()
 {
-	seek(TokenType::Keyword);
-	if (m_token.value == "if")
+	eat(TokenType::Keyword);
+	if (token->value == "if")
 	{
-		seek(TokenType::Operator);
-		if (m_token.value == "(")
+		eat(TokenType::Operator);
+		if (token->value == "(")
 		{
 			expression();
 
-			seek(TokenType::Operator);
-			if (m_token.value == ")")
+			eat(TokenType::Operator);
+			if (token->value == ")")
 			{
 				block();
 
 				auto& v = peek().value;
 				if (v == "else")
 				{
-					nextToken();
+					m_index++;
 
 					block();
 				}
@@ -356,13 +383,13 @@ void Parser::selStmt()
 
 void Parser::block()
 {
-	seek(TokenType::Separator);
-	if (m_token.value == "{")
+	eat(TokenType::Separator);
+	if (token->value == "{")
 	{
 		program();
 
-		seek(TokenType::Separator);
-		if (m_token.value == "}")
+		eat(TokenType::Separator);
+		if (token->value == "}")
 		{
 			return;
 		}
@@ -373,16 +400,16 @@ void Parser::block()
 
 void Parser::iterStmt()
 {
-	seek(TokenType::Keyword);
-	if (m_token.value == "while")
+	eat(TokenType::Keyword);
+	if (token->value == "while")
 	{
-		seek(TokenType::Separator);
-		if (m_token.value == "(")
+		eat(TokenType::Operator);
+		if (token->value == "(")
 		{
 			expression();
 
-			seek(TokenType::Separator);
-			if (m_token.value == ")")
+			eat(TokenType::Operator);
+			if (token->value == ")")
 			{
 				block();
 
@@ -396,13 +423,13 @@ void Parser::iterStmt()
 
 void Parser::printStmt()
 {
-	seek(TokenType::Keyword);
-	if (m_token.value == "print")
+	eat(TokenType::Keyword);
+	if (token->value == "print")
 	{
 		expression();
 
-		seek(TokenType::Separator);
-		if (m_token.value == ";")
+		eat(TokenType::Separator);
+		if (token->value == ";")
 		{
 			return;
 		}
@@ -413,15 +440,15 @@ void Parser::printStmt()
 
 void Parser::exprStmt()
 {
-	seek(TokenType::Id);
+	eat(TokenType::Id);
 
-	seek(TokenType::Operator);
-	if (m_token.value == "=")
+	eat(TokenType::Operator);
+	if (token->value == "=")
 	{
 		expression();
 
-		seek(TokenType::Separator);
-		if (m_token.value == ";")
+		eat(TokenType::Separator);
+		if (token->value == ";")
 		{
 			return;
 		}
