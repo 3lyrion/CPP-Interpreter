@@ -1,13 +1,10 @@
-#include "Lexer.hpp"
+#include "Parser.h"
 
 int main()
 {
     setlocale(LC_CTYPE, "Russian");
 
-//    Lexer lexer;
-
-    ifstream     file("input.txt", ios::in);
-    stringstream input/*(R"(
+    /*stringstream input(R"(
 
         // Начало
         int x = 0;
@@ -36,13 +33,20 @@ int main()
     )")*/;
 
     Lexer lexer("input.txt");
-    auto tokens = lexer.tokenize();
+    auto result = lexer.tokenize();
 
-    
+    if (!result.success) return EXIT_FAILURE;
 
-//    lexer.scan(file);
-    
- //   file.close();
+    Parser parser;
+    parser.parse(result.tokens);
+
+    /*
+    auto& tokens = lexer.tokenize();
+
+    for (auto& token : tokens)
+        cout << '\t' << token.value << "\t\t: " << Lexer::tokenTypeToString(token.type) << '\n';
+
+    */
 
     return 0;
 }

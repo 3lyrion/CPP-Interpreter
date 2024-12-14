@@ -1,13 +1,13 @@
 #pragma once
 
 #include "DFA.hpp"
+
+#include <queue>
 	
 enum class TokenType
 {
 	Id = 0,
-	Type,
 	Operator,
-	BoolLiteral,
 	FloatLiteral,
 	IntLiteral,
 	StringLiteral,
@@ -21,6 +21,9 @@ public:
 	TokenType type;
 	string value;
 
+	Token() : 
+		type(TokenType(0)) { }
+
 	Token(TokenType _type, string _value)
 	: type(_type)
 	, value(_value)
@@ -30,9 +33,20 @@ public:
 class Lexer
 {
 public:
+	struct Result
+	{
+		bool success = false;
+
+		queue<Token> const& tokens;
+
+		Result(bool success_, queue<Token> const& tokens_) :
+			success (success_),
+			tokens  (tokens_) { }
+	};
+
 	Lexer(filesystem::path srcPath);
 
-	vector<Token> tokenize();
+	Result tokenize();
 	
 	inline static string tokenTypeToString(TokenType type)
 	{
@@ -40,11 +54,7 @@ public:
         {
         case TokenType::Id: return "Идентификатор";
             break;
-        case TokenType::Type: return "Тип";
-            break;
         case TokenType::Operator: return "Оператор";
-            break;
-        case TokenType::BoolLiteral: return "Литерал (bool)";
             break;
         case TokenType::FloatLiteral: return "Литерал (float)";
             break;
@@ -71,6 +81,8 @@ private:
 	size_t m_currentLine      = 1;
 	size_t m_currentChar      = 0;
 	size_t m_commentStartLine = 0;
+
+	queue<Token> m_tokens;
 
 	unordered_set<string> m_keywords;
 	unordered_set<string> m_operators;

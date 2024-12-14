@@ -59,10 +59,8 @@ Lexer::Lexer(filesystem::path srcPath) :
 	initDFA();
 }
 
-vector<Token> Lexer::tokenize() {
-	
-	vector<Token> tokens;
-
+Lexer::Result Lexer::tokenize()
+{
 	bool parsingOneLineComment = false;
 	bool parsingMultiLineComment = false;
 	bool asteriskMet = false;
@@ -157,25 +155,25 @@ vector<Token> Lexer::tokenize() {
 				}
 
 				if (m_keywords.contains(lexem))
-					tokens.emplace_back(TokenType::Keyword, lexem);
-
-				else if (m_regex_id.Process(lexem))
-					tokens.emplace_back(TokenType::Id, lexem);
+					m_tokens.emplace(TokenType::Keyword, lexem);
 
 				else if (m_regex_float.Process(lexem))
-					tokens.emplace_back(TokenType::FloatLiteral, lexem);
+					m_tokens.emplace(TokenType::FloatLiteral, lexem);
 
 				else if (m_regex_int.Process(lexem))
-					tokens.emplace_back(TokenType::IntLiteral, lexem);
+					m_tokens.emplace(TokenType::IntLiteral, lexem);
+
+				else if (m_regex_id.Process(lexem))
+					m_tokens.emplace(TokenType::Id, lexem);
 
 				else if (m_regex_string.Process(lexem))
 				{
 					if (lexem.length() == 2)
-						tokens.emplace_back(TokenType::StringLiteral, "");
+						m_tokens.emplace(TokenType::StringLiteral, "");
 
 					else
-						tokens.emplace_back(TokenType::StringLiteral, string(lexem.begin() + 1, lexem.end() - 1));
-				} 
+						m_tokens.emplace(TokenType::StringLiteral, string(lexem.begin() + 1, lexem.end() - 1));
+				}
 						
 				lexem = "";
 
@@ -192,34 +190,34 @@ vector<Token> Lexer::tokenize() {
 			{
 				if (lexem == "(")
 				{
-					tokens.push_back({TokenType::Separator, "("});
+					m_tokens.emplace(TokenType::Separator, "(");
 					lexem = "";
 				}
 
 				else if (lexem == ")")
 				{
-					tokens.push_back({TokenType::Separator, ")"});
+					m_tokens.emplace(TokenType::Separator, ")");
 					lexem = "";
 
 				}
 				
 				else if (lexem == "{") 
 				{
-					tokens.push_back({TokenType::Separator, "{"});
+					m_tokens.emplace(TokenType::Separator, "{");
 					lexem = "";
 
 				} 
 				
 				else if (lexem == "}")
 				{
-					tokens.push_back({TokenType::Separator, "}"});
+					m_tokens.emplace(TokenType::Separator, "}");
 					lexem = "";
 
 				} 
 				
 				else if (lexem == ";")
 				{
-					tokens.push_back({TokenType::Separator, ";"});
+					m_tokens.emplace(TokenType::Separator, ";");
 					lexem = "";
 				}
 
@@ -247,7 +245,7 @@ vector<Token> Lexer::tokenize() {
 
 				else if (m_operators.contains(lexem) && !m_compounds.contains(lexem + c))
 				{
-					tokens.emplace_back(TokenType::Operator, lexem);
+					m_tokens.emplace(TokenType::Operator, lexem);
 					lexem = "";
 				}
 
@@ -263,8 +261,26 @@ vector<Token> Lexer::tokenize() {
 				if (!isWs) lexem += c;						
 			}
 
-			end:
+		end:
+			/*
+			if (isWs)
+			{
+				bool noError = false;
 
+				for (auto& kw : m_keywords)
+				{
+					if (kw.find(lexem) != string::npos)
+					{
+						noError = true;
+
+						break;
+					}
+				}
+
+				if (!noError)
+					throw string("Запрещённый символ ") + lexem;
+			}
+			*/
 			++m_pos;
 			
 		}
@@ -275,9 +291,11 @@ vector<Token> Lexer::tokenize() {
 	{
 		printf("Ошибка (стр. %zu, с. %zu) : ", m_currentLine, m_currentChar);
 		cerr << error << '\n';
+
+		return { false, m_tokens };
 	}
 
-	return tokens;
+	return { true, m_tokens };
 	
 }
 
