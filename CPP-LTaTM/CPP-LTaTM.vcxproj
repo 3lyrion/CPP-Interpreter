@@ -155,6 +155,7 @@
     <ClCompile Include="Parser.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BinTree.h" />
     <ClInclude Include="DFA.hpp" />
     <ClInclude Include="Lexer.hpp" />
     <ClInclude Include="Parser.h" />

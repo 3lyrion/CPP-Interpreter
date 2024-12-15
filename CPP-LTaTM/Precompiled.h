@@ -12,3 +12,17 @@
 using namespace std;
 
 namespace fs = filesystem;
+
+namespace util
+{
+	// Безопасное удаление
+	template <typename T>
+	void dispose(T** object) 
+	{
+		if (object && *object)
+		{
+			delete *object;
+			*object = nullptr;
+		}
+	}
+}

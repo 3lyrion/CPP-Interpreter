@@ -43,5 +43,8 @@
     <ClInclude Include="Parser.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="BinTree.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

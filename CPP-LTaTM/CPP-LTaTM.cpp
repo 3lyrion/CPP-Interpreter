@@ -1,8 +1,12 @@
 #include "Parser.h"
 
+#include "BinTree.h"
+
 int main()
 {
-    setlocale(LC_CTYPE, "Russian");
+//    setlocale(LC_CTYPE, "Russian");
+
+    locale::global(locale("ru_RU.UTF-8"));
 
     /*stringstream input(R"(
 
@@ -36,9 +40,25 @@ int main()
     Parser parser(lexer);
     parser.parse();*/
 
-    auto lexer = make_unique<Lexer>("input.txt");
+    /*auto lexer = make_unique<Lexer>("input.txt");
     auto parser = make_unique<Parser>(*lexer);
-    parser->parse();
+    parser->parse();*/
+
+    BinTree<int> btree(0);
+
+    btree.push_left(1);
+    btree.push_right(2);
+    btree.left();
+    btree.emplace_left(3);
+    btree.emplace_right(4);
+    btree.back();
+    btree.right();
+    btree.push_left(5);
+    btree.begin();
+
+    btree.bypass();
+
+    
 
     /*
     auto& tokens = lexer.tokenize();
