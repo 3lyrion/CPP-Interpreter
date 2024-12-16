@@ -11,7 +11,7 @@ class Tree
 
 		Node* back = nullptr;
 
-		list<Node> childs;
+		list<Node*> childs;
 
 		T value = T(0);
 
@@ -50,7 +50,7 @@ public:
 		m_size++;
 	}
 
-	constexpr init(auto&&... args)
+	constexpr void init(auto&&... args)
 	{
 		if (m_node) return;
 
@@ -68,90 +68,77 @@ public:
 	void push_back(T const& value)
 	{
 		auto& childs = m_node->childs;
-		childs.emplace_back(value);
+		childs.emplace_back(new Node(value));
 
-		childs.back().back = m_node;
+		childs.back()->back = m_node;
 
 		m_size++;
 	}
 
 	void push_back(Tree&& tree)
 	{
-		tree.m_node
+		tree.m_node->back = m_node;
 
 		auto& childs = m_node->childs;
-		childs.emplace_back(value);
+		childs.emplace_back(tree.m_node);
 
-		childs.back().back = m_node;
-
-		m_size++;
+		m_size += tree.m_size;
 	}
 
 	void push_front(T const& value)
 	{
 		auto& childs = m_node->childs;
-		childs.emplace_front(value);
+		childs.emplace_front(new Node(value));
 
-		childs.front().back = m_node;
+		childs.front()->back = m_node;
 
 		m_size++;
+	}
+
+	void push_front(Tree&& tree)
+	{
+		tree.m_node->back = m_node;
+
+		auto& childs = m_node->childs;
+		childs.emplace_front(tree.m_node);
+
+		m_size += tree.m_size;
 	}
 
 	constexpr /*T&*/ void emplace_back(auto&&... args)
 	{
 		auto& childs = m_node->childs;
-		auto& b = childs.emplace_back(forward<decltype(args)>(args)...);
+		auto& b = childs.emplace_back(new Node(forward<decltype(args)>(args)...));
 
-		b.back = m_node;
+		b->back = m_node;
 		m_size++;
 
-		/*return b.value;*/
+		/*return b->value;*/
 	}
 
 	constexpr /*T&*/ void emplace_front(auto&&... args)
 	{
 		auto& childs = m_node->childs;
-		auto& f = childs.emplace_front(forward<decltype(args)>(args)...);
+		auto& f = childs.emplace_front(new Node(forward<decltype(args)>(args)...));
 
-		f.back = m_node;
+		f->back = m_node;
 		m_size++;
 
-		/*return f.value;*/
+		/*return f->value;*/
 	}
 
 	T const& get() const
 	{
 		return m_node->value;
 	}
-	/*
-	void pop()
-	{
-		auto b = m_node->back;
-		auto l = m_node->left;
-		auto r = m_node->right;
-
-		if (b)
-		{
-			if (b->left) b->left = nullptr;
-			else         b->right = nullptr;
-		}
-
-		if (l)
-			l->back = nullptr;
-
-		if (r)
-			r->back = nullptr;
-
-		util::dispose(&m_node);
-	}
-	*/
+	
 	void begin()
 	{
 		while (m_node->back)
 			m_node = m_node->back;
 	}
 
-	bool back()
+	bool go_back()
 	{
 		if (m_node->back)
 		{
@@ -163,6 +150,16 @@ public:
 		return false;
 	}
 
+	void front()
+	{
+		m_node = m_node->childs.front();
+	}
+
+	void back()
+	{
+		m_node = m_node->childs.back();
+	}
+
 	bool select(uint32_t index)
 	{
 		auto& childs = m_node->childs;
@@ -172,7 +169,7 @@ public:
 			auto it = childs.begin();
 			advance(it, index);
 
-			m_node = &*it;
+			m_node = *it;
 
 			return true;
 		}
@@ -232,7 +229,7 @@ private:
 
 		for (auto& ch : m_node->childs)
 		{
-			m_node = &ch;
+			m_node = ch;
 			visit();
 
 			seek();

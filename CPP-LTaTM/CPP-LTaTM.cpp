@@ -1,6 +1,6 @@
 #include "Parser.h"
 
-#include "Tree.h"
+//#include "Tree.h"
 
 int main()
 {
@@ -35,11 +35,11 @@ int main()
         print "Рус";            
 
     )")*/;
-
-    /*Lexer lexer("input.txt");
+    
+    Lexer lexer("input.txt");
     Parser parser(lexer);
-    parser.parse();*/
-
+    parser.parse();
+    
     /*auto lexer = make_unique<Lexer>("input.txt");
     auto parser = make_unique<Parser>(*lexer);
     parser->parse();*/
@@ -58,17 +58,20 @@ int main()
 
     btree.bypass();
     */
+    /*
+    Tree<int> tree1(0);
+    tree1.push_back(1);
+    tree1.push_back(2);
 
-    Tree<int> tree(0);
-    tree.push_back(1);
-    tree.push_back(2);
-    tree.push_back(3);
-    tree.select(0);
-    tree.emplace_back(3);
-    tree.emplace_front(4);
-    tree.emplace_front(5);
-    tree.print();
+    Tree<int> tree2(3);
+    tree2.emplace_back(4);
+    tree2.emplace_front(5);
+    tree2.emplace_front(6);
 
+    tree1.push_back(move(tree2));
+
+    tree1.print();
+    */
     /*
     auto& tokens = lexer.tokenize();
 

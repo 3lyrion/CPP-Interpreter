@@ -12,9 +12,11 @@ void Parser::parse()
 	{
 		tokens = &lexer.tokenize();
 
-		program();
-		
-		cout << token->value << "\n";
+		m_tree = program();
+
+		m_tree->print();
+
+//		cout << token->value << "\n";
 	}
 	catch (string& e)
 	{
@@ -56,83 +58,109 @@ void Parser::eat(TokenType type)
 		throw runtime_error("Неожиданный токен");
 }
 
-void Parser::program()
+Parser::STreePtr Parser::program()
 {
-	if (m_tree.empty())
-		m_tree.init(__func__);
-	else
-		m_tree.emplace_back(__func__);
+	//if (m_tree.empty())
+	//	m_tree.init(__func__);
+	//else
+	//	m_tree.emplace_back(__func__);
+
+	auto tree = make_unique<STree>(__func__);
 
 	while (true)
 	{
 		auto index = m_index;
 
-		try { declaration(); }
+		try { tree->push_back(move(*declaration().release())); }
 		catch (...)
 		{
 			m_index = index;
 
-			try { statement(); }
+			try { tree->push_back(move(*statement().release())); }
 			catch (...)
 			{
 				m_index = index;
 
-				try { block(); }
+				try { tree->push_back(move(*block().release())); }
 				catch (...)
 				{
 					m_index = index;
 
-					return;
+					return tree;
 				}
 			}
 		}
 	}
 }
 
-void Parser::declaration()
+Parser::STreePtr Parser::declaration()
 {
-
-
 	auto index = m_index;
 
 	try
 	{
-		typeSpec();
+		auto tree = make_unique<STree>(__func__);
+
+		tree->push_back(move(*typeSpec().release()));
 
 		eat(TokenType::Id);
+		{
+			STree _tree("id");
+			_tree.emplace_back(token->value);
+			tree->push_back(move(_tree));
+		}
 
-		auto& tk = peek();
-		if (tk.value == "=")
+		auto& v = peek().value;
+		if (v == "=")
 		{
 			m_index++;
 
-			expression();
+			tree->emplace_back(v);
+			tree->push_back(move(*expression().release()));
 		}
 
 		eat(TokenType::Separator);
 		if (token->value == ";")
-			return;
+		{
+			tree->emplace_back(token->value);
+
+			return tree;
+		}
 	}
 
 	catch (...)
 	{
+		auto tree = make_unique<STree>(__func__);
+
 		m_index = index;
 
 		eat(TokenType::Keyword);
 		if (token->value == "const")
 		{
-			typeSpec();
+			tree->emplace_back(token->value);
+
+			tree->push_back(move(*typeSpec().release()));
 
 			eat(TokenType::Id);
+			{
+				STree _tree("id");
+				_tree.emplace_back(token->value);
+				tree->push_back(move(_tree));
+			}
 
 			eat(TokenType::Operator);
 			if (token->value == "=")
 			{
-				expression();
+				tree->emplace_back(token->value);
+				tree->push_back(move(*expression().release()));
 
 				eat(TokenType::Separator);
 				if (token->value == ";")
-					return;
+				{
+					tree->emplace_back(token->value);
+
+					return tree;
+				}
 			}
 		}
 	}
@@ -140,134 +168,172 @@ void Parser::declaration()
 	throw runtime_error("");
 }
 
-void Parser::typeSpec()
+Parser::STreePtr Parser::typeSpec()
 {
+	auto tree = make_unique<STree>(__func__);
+
 	eat(TokenType::Keyword);
 	auto& v = token->value;
 	if (v == "bool" || v == "float" || v == "int" || v == "string")
-		return;
+	{
+		tree->emplace_back(v);
+
+		return tree;
+	}
 
 	throw runtime_error("");
 }
 
-void Parser::expression()
+Parser::STreePtr Parser::expression()
 {
+	auto tree = make_unique<STree>(__func__);
+
 begin:
-	logic1();
+	tree->push_back(move(*logic1().release()));
 
 	auto& v = peek().value;
 	if (v == "||")
 	{
 		m_index++;
 
+		tree->emplace_back(v);
+
 		goto begin;
 	}
 
-	return;
+	return tree;
 }
 
-void Parser::logic1()
+Parser::STreePtr Parser::logic1()
 {
+	auto tree = make_unique<STree>(__func__);
+
 begin:
-	logic2();
+	tree->push_back(move(*logic2().release()));
 
 	auto& v = peek().value;
 	if (v == "&&")
 	{
 		m_index++;
 
+		tree->emplace_back(v);
+
 		goto begin;
 	}
 
-	return;
+	return tree;
 }
 
-void Parser::logic2()
+Parser::STreePtr Parser::logic2()
 {
+	auto tree = make_unique<STree>(__func__);
+
 begin:
-	logic3();
+	tree->push_back(move(*logic3().release()));
 
 	auto& v = peek().value;
 	if (v == "==" || v == "!=")
 	{
 		m_index++;
 
+		tree->emplace_back(v);
+
 		goto begin;
 	}
 
-	return;
+	return tree;
 }
 
-void Parser::logic3()
+Parser::STreePtr Parser::logic3()
 {
+	auto tree = make_unique<STree>(__func__);
+
 begin:
-	term();
+	tree->push_back(move(*term().release()));
 
 	auto& v = peek().value;
 	if (v == "<" || v == ">" || v == "<=" || v == ">=")
 	{
 		m_index++;
 
+		tree->emplace_back(v);
+
 		goto begin;
 	}
 
-	return;
+	return tree;
 }
 
-void Parser::term()
+Parser::STreePtr Parser::term()
 {
+	auto tree = make_unique<STree>(__func__);
+
 begin:
-	factor();
+	tree->push_back(move(*factor().release()));
 
 	auto& v = peek().value;
 	if (v == "+" || v == "-")
 	{
 		m_index++;
 
+		tree->emplace_back(v);
+
 		goto begin;
 	}
 
-	return;
+	return tree;
 }
 
-void Parser::factor()
+Parser::STreePtr Parser::factor()
 {
+	auto tree = make_unique<STree>(__func__);
+
 begin:
-	power();
+	tree->push_back(move(*power().release()));
 
 	auto& v = peek().value;
 	if (v == "*" || v == "/" || v == "%")
 	{
 		m_index++;
 
+		tree->emplace_back(v);
+
 		goto begin;
 	}
 
-	return;
+	return tree;
 }
 
-void Parser::power()
+Parser::STreePtr Parser::power()
 {
+	auto tree = make_unique<STree>(__func__);
+
 begin:
-	operand();
+	tree->push_back(move(*operand().release()));
 
 	auto& v = peek().value;
 	if (v == "^")
 	{
 		m_index++;
 
+		tree->emplace_back(v);
+
 		goto begin;
 	}
 
-	return;
+	return tree;
 }
 
-void Parser::operand()
+Parser::STreePtr Parser::operand()
 {
+	auto tree = make_unique<STree>(__func__);
+
 	auto& v = peek().value;
 	if (v == "-" || v == "!")
 	{
 		m_index++;
+
+		tree->emplace_back(v);
 	}
 
 	auto& tk = peek();
@@ -276,78 +342,106 @@ void Parser::operand()
 	{
 		m_index++;
 
-		expression();
+		tree->emplace_back(tk.value);
+
+		tree->push_back(move(*expression().release()));
 
 		eat(TokenType::Operator);
 		if (token->value == ")")
-			return;
+		{
+			tree->emplace_back(token->value);
+
+			return tree;
+		}
 	}
 
 	else if (tk.type == TokenType::Id)
 	{
 		m_index++;
 
-		return;
+		{
+			STree _tree("id");
+			_tree.emplace_back(tk.value);
+			tree->push_back(move(_tree));
+		}
+
+		return tree;
 	}
 
 	else
 	{
-		literal();
+		tree->push_back(move(*literal().release()));
+
+		return tree;
 	}
 }
 
-void Parser::literal()
+Parser::STreePtr Parser::literal()
 {
+	auto tree = make_unique<STree>(__func__);
+
 	seek();
 
 	if (token->type == TokenType::FloatLiteral)
 	{
-		return;
+		tree->emplace_back(token->value);
+
+		return tree;
 	}
 
 	if (token->type == TokenType::IntLiteral)
 	{
-		return;
+		tree->emplace_back(token->value);
+
+		return tree;
 	}
 
 	if (token->type == TokenType::StringLiteral)
 	{
-		return;
+		tree->emplace_back(token->value);
+
+		return tree;
 	}
 
 	if (token->value == "true")
 	{
-		return;
+		tree->emplace_back(token->value);
+
+		return tree;
 	}
 
 	if (token->value == "false")
 	{
-		return;
+		tree->emplace_back(token->value);
+
+		return tree;
 	}
 
 	throw runtime_error("");
 }
 
-void Parser::statement()
+Parser::STreePtr Parser::statement()
 {
+	auto tree = make_unique<STree>(__func__);
+
 	auto index = m_index;
 
-	try { selStmt(); }
+	try { tree->push_back(move(*selStmt().release())); }
 	catch (...)
 	{
 		m_index = index;
 
-		try { iterStmt(); }
+		try { tree->push_back(move(*iterStmt().release())); }
 		catch (...)
 		{
 			m_index = index;
 
-			try { printStmt(); }
+			try { tree->push_back(move(*printStmt().release())); }
 			catch (...)
 			{
 				m_index = index;
 
-				try { exprStmt(); }
+				try { tree->push_back(move(*exprStmt().release())); }
 				catch (...)
 				{
 					throw runtime_error("");
@@ -355,32 +449,44 @@ void Parser::statement()
 			}
 		}
 	}
+
+	return tree;
 }
 
-void Parser::selStmt()
+Parser::STreePtr Parser::selStmt()
 {
+	auto tree = make_unique<STree>(__func__);
+
 	eat(TokenType::Keyword);
 	if (token->value == "if")
 	{
+		tree->emplace_back(token->value);
+
 		eat(TokenType::Operator);
 		if (token->value == "(")
 		{
-			expression();
+			tree->emplace_back(token->value);
+
+			tree->push_back(move(*expression().release()));
 
 			eat(TokenType::Operator);
 			if (token->value == ")")
 			{
-				block();
+				tree->emplace_back(token->value);
+
+				tree->push_back(move(*block().release()));
 
 				auto& v = peek().value;
 				if (v == "else")
 				{
 					m_index++;
 
-					block();
+					tree->emplace_back(v);
+
+					tree->push_back(move(*block().release()));
 				}
 
-				return;
+				return tree;
 			}
 		}
 	}
@@ -388,39 +494,53 @@ void Parser::selStmt()
 	throw runtime_error("");
 }
 
-void Parser::block()
+Parser::STreePtr Parser::block()
 {
+	auto tree = make_unique<STree>(__func__);
+
 	eat(TokenType::Separator);
 	if (token->value == "{")
 	{
-		program();
+		tree->emplace_back(token->value);
+
+		tree->push_back(move(*program().release()));
 
 		eat(TokenType::Separator);
 		if (token->value == "}")
 		{
-			return;
+			tree->emplace_back(token->value);
+
+			return tree;
 		}
 	}
 
 	throw runtime_error("");
 }
 
-void Parser::iterStmt()
+Parser::STreePtr Parser::iterStmt()
 {
+	auto tree = make_unique<STree>(__func__);
+
 	eat(TokenType::Keyword);
 	if (token->value == "while")
 	{
+		tree->emplace_back(token->value);
+
 		eat(TokenType::Operator);
 		if (token->value == "(")
 		{
-			expression();
+			tree->emplace_back(token->value);
+
+			tree->push_back(move(*expression().release()));
 
 			eat(TokenType::Operator);
 			if (token->value == ")")
 			{
-				block();
+				tree->emplace_back(token->value);
 
-				return;
+				tree->push_back(move(*block().release()));
+
+				return tree;
 			}
 		}
 	}
@@ -428,36 +548,53 @@ void Parser::iterStmt()
 	throw runtime_error("");
 }
 
-void Parser::printStmt()
+Parser::STreePtr Parser::printStmt()
 {
+	auto tree = make_unique<STree>(__func__);
+
 	eat(TokenType::Keyword);
 	if (token->value == "print")
 	{
-		expression();
+		tree->emplace_back(token->value);
+
+		tree->push_back(move(*expression().release()));
 
 		eat(TokenType::Separator);
 		if (token->value == ";")
 		{
-			return;
+			tree->emplace_back(token->value);
+
+			return tree;
 		}
 	}
 
 	throw runtime_error("");
 }
 
-void Parser::exprStmt()
+Parser::STreePtr Parser::exprStmt()
 {
+	auto tree = make_unique<STree>(__func__);
+
 	eat(TokenType::Id);
+	{
+		STree _tree("id");
+		_tree.emplace_back(token->value);
+		tree->push_back(move(_tree));
+	}
 
 	eat(TokenType::Operator);
 	if (token->value == "=")
 	{
-		expression();
+		tree->emplace_back(token->value);
+
+		tree->push_back(move(*expression().release()));
 
 		eat(TokenType::Separator);
 		if (token->value == ";")
 		{
-			return;
+			tree->emplace_back(token->value);
+
+			return tree;
 		}
 	}
 

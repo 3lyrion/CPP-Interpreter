@@ -11,14 +11,19 @@ public:
 	void parse();
 
 private:
+	using STree    = Tree<string>;
+	using STreePtr = uptr<STree>;
+
 	Lexer& lexer;
 
 	vector<Token> const* tokens = nullptr;
 	Token         const* token  = nullptr;
 
-	Tree<string> m_tree;
+	STreePtr m_tree = nullptr;
 
 	size_t m_index = 0;
+
+//	list<STree> m_tempTrees;
 
 private:
 	void seek(size_t offset = 1);
@@ -28,40 +33,40 @@ private:
 	void eat(TokenType type);
 
 private:
-	void program();
+	STreePtr program();
 
-	void declaration();
+	STreePtr declaration();
 
-	void typeSpec();
+	STreePtr typeSpec();
 
-	void expression();
+	STreePtr expression();
 
-	void logic1();
+	STreePtr logic1();
 
-	void logic2();
+	STreePtr logic2();
 
-	void logic3();
+	STreePtr logic3();
 
-	void term();
+	STreePtr term();
 
-	void factor();
+	STreePtr factor();
 
-	void power();
+	STreePtr power();
 
-	void operand();
+	STreePtr operand();
 
-	void literal();
+	STreePtr literal();
 
-	void statement();
+	STreePtr statement();
 
-	void selStmt();
+	STreePtr selStmt();
 
-	void block();
+	STreePtr block();
 
-	void iterStmt();
+	STreePtr iterStmt();
 
-	void printStmt();
+	STreePtr printStmt();
 
-	void exprStmt();
+	STreePtr exprStmt();
 };
 
