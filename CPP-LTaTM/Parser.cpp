@@ -58,6 +58,11 @@ void Parser::eat(TokenType type)
 
 void Parser::program()
 {
+	if (m_tree.empty())
+		m_tree.init(__func__);
+	else
+		m_tree.emplace_back(__func__);
+
 	while (true)
 	{
 		auto index = m_index;
@@ -86,6 +91,8 @@ void Parser::program()
 
 void Parser::declaration()
 {
+
+
 	auto index = m_index;
 
 	try

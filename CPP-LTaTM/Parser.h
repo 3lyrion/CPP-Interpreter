@@ -1,9 +1,7 @@
 #pragma once
 
 #include "Lexer.hpp"
-
-template <typename T>
-concept TokenT = std::is_same<T, TokenType>::value;
+#include "Tree.h"
 
 class Parser
 {
@@ -17,6 +15,8 @@ private:
 
 	vector<Token> const* tokens = nullptr;
 	Token         const* token  = nullptr;
+
+	Tree<string> m_tree;
 
 	size_t m_index = 0;
 

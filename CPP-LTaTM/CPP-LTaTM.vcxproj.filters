@@ -46,5 +46,8 @@
     <ClInclude Include="BinTree.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Tree.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

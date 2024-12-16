@@ -1,6 +1,6 @@
 #include "Parser.h"
 
-#include "BinTree.h"
+#include "Tree.h"
 
 int main()
 {
@@ -43,7 +43,7 @@ int main()
     /*auto lexer = make_unique<Lexer>("input.txt");
     auto parser = make_unique<Parser>(*lexer);
     parser->parse();*/
-
+    /*
     BinTree<int> btree(0);
 
     btree.push_left(1);
@@ -57,8 +57,17 @@ int main()
     btree.begin();
 
     btree.bypass();
+    */
 
-    
+    Tree<int> tree(0);
+    tree.push_back(1);
+    tree.push_back(2);
+    tree.push_back(3);
+    tree.select(0);
+    tree.emplace_back(3);
+    tree.emplace_front(4);
+    tree.emplace_front(5);
+    tree.print();
 
     /*
     auto& tokens = lexer.tokenize();
