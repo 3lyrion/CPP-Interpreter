@@ -62,7 +62,15 @@ public:
 	{
 		if (!m_node) return;
 
-		// ??? 
+		begin();
+
+		auto head = m_node;
+
+		_clear();
+
+		//cout << head->value << '\n';
+
+		delete head;
 	}
 
 	void push_back(T const& value)
@@ -81,6 +89,8 @@ public:
 
 		auto& childs = m_node->childs;
 		childs.emplace_back(tree.m_node);
+
+		tree.m_node = nullptr;
 
 		m_size += tree.m_size;
 	}
@@ -101,6 +111,8 @@ public:
 
 		auto& childs = m_node->childs;
 		childs.emplace_front(tree.m_node);
+
+		tree.m_node = nullptr;
 
 		m_size += tree.m_size;
 	}
@@ -199,6 +211,21 @@ private:
 	Node* m_node = nullptr;
 
 	size_t m_size = 0;
+
+private:
+	void _clear()
+	{
+		for (auto& ch : m_node->childs)
+		{
+			m_node = ch;
+
+			_clear();
+
+			//cout << ch->value << '\n';
+
+			delete ch;
+		}
+	}
 
 private:
 	size_t _count = 0;

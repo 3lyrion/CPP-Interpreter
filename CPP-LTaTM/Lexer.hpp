@@ -2,8 +2,6 @@
 
 #include "DFA.hpp"
 
-#include <queue>
-	
 enum class TokenType
 {
 	Id = 0,
@@ -20,14 +18,14 @@ struct Token
 public:
 	TokenType type;
 	string value;
+	uint32_t line = 0;
+	uint32_t symbol = 0;
 
-	Token() : 
-		type(TokenType(0)) { }
-
-	Token(TokenType _type, string _value)
-	: type(_type)
-	, value(_value)
-	{ }
+	Token(TokenType type_, string const& value_, uint32_t line_, uint32_t symbol_) : 
+		type   (type_),
+		value  (value_),
+		line   (line_),
+		symbol (symbol_) { }
 };
 
 class Lexer
@@ -64,12 +62,12 @@ public:
 private:
 	filesystem::path m_srcPath;
 
-	string m_src;
-	size_t m_pos              = 0;
-	size_t m_srcLength        = 0;
-	size_t m_currentLine      = 1;
-	size_t m_currentChar      = 0;
-	size_t m_commentStartLine = 0;
+	string   m_src;
+	size_t   m_pos              = 0;
+	size_t   m_srcLength        = 0;
+	uint32_t m_currentLine      = 1;
+	uint32_t m_currentChar      = 0;
+	uint32_t m_commentStartLine = 0;
 
 	vector<Token> m_tokens;
 

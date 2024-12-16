@@ -6,7 +6,7 @@ int main()
 {
 //    setlocale(LC_CTYPE, "Russian");
 
-    locale::global(locale("ru_RU.UTF-8"));
+    locale::global(locale(".UTF-8"));
 
     /*stringstream input(R"(
 
@@ -58,20 +58,26 @@ int main()
 
     btree.bypass();
     */
-    /*
-    Tree<int> tree1(0);
-    tree1.push_back(1);
-    tree1.push_back(2);
+    
+    //Tree<int> tree1(0);
+    //tree1.push_back(1);
+    //tree1.push_back(2);
+    ///*
+    //tree1.push_back(3);
+    //tree1.front();
+    //tree1.push_back(4);
+    //tree1.push_back(5);
+    //tree1.push_back(6);
+    //*/
+    //Tree<int> tree2(3);
+    //tree2.emplace_back(4);
+    //tree2.emplace_front(5);
+    //tree2.emplace_front(6);
 
-    Tree<int> tree2(3);
-    tree2.emplace_back(4);
-    tree2.emplace_front(5);
-    tree2.emplace_front(6);
+    //tree1.push_back(move(tree2));
 
-    tree1.push_back(move(tree2));
-
-    tree1.print();
-    */
+//    tree1.print();
+    
     /*
     auto& tokens = lexer.tokenize();
 

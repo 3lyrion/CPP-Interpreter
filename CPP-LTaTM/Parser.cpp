@@ -11,41 +11,39 @@ void Parser::parse()
 	try 
 	{
 		tokens = &lexer.tokenize();
-
+		
 		m_tree = program();
 
-		m_tree->print();
-
-//		cout << token->value << "\n";
-	}
-	catch (string& e)
-	{
-		if (e == "Конец")
+		if (m_trace < tokens->size() - 1)
 		{
-			cout << "УСПЕХ\n";
-		}
+			auto& token = (*tokens)[m_trace];
 
+			printf("Unexpected token (l. %d, s. %d) : '%s'\n", token.line, token.symbol, token.value.c_str());
+		}
 		else
-		{
-			cout << "Неожиданный токен\n";
-		}
+			m_tree->print();
+	}
+	catch (runtime_error e)
+	{
+
 	}
 }
 
-void Parser::seek(size_t offset)
+
+void Parser::seek()
 {
 	if (m_index > tokens->size() - 1)
-		throw "Конец";
+		throw "";
 
 	token = &(*tokens)[m_index];
 
-	m_index += offset;
+	raise();
 }
 
 Token const& Parser::peek()
 {
 	if (m_index > tokens->size() - 1)
-		throw "Конец";
+		throw "";
 
 	return (*tokens)[m_index];
 }
@@ -55,16 +53,17 @@ void Parser::eat(TokenType type)
 	seek();
 
 	if (token->type != type)
-		throw runtime_error("Неожиданный токен");
+		throw runtime_error("");
+}
+
+void Parser::raise()
+{
+	m_trace = max(m_trace, m_index);
+	m_index++;
 }
 
 Parser::STreePtr Parser::program()
 {
-	//if (m_tree.empty())
-	//	m_tree.init(__func__);
-	//else
-	//	m_tree.emplace_back(__func__);
-
 	auto tree = make_unique<STree>(__func__);
 
 	while (true)
@@ -113,7 +112,7 @@ Parser::STreePtr Parser::declaration()
 		auto& v = peek().value;
 		if (v == "=")
 		{
-			m_index++;
+			raise();
 
 			tree->emplace_back(v);
 			tree->push_back(move(*expression().release()));
@@ -194,7 +193,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "||")
 	{
-		m_index++;
+		raise();
 
 		tree->emplace_back(v);
 
@@ -214,7 +213,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "&&")
 	{
-		m_index++;
+		raise();
 
 		tree->emplace_back(v);
 
@@ -234,7 +233,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "==" || v == "!=")
 	{
-		m_index++;
+		raise();
 
 		tree->emplace_back(v);
 
@@ -254,7 +253,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "<" || v == ">" || v == "<=" || v == ">=")
 	{
-		m_index++;
+		raise();
 
 		tree->emplace_back(v);
 
@@ -274,7 +273,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "+" || v == "-")
 	{
-		m_index++;
+		raise();
 
 		tree->emplace_back(v);
 
@@ -294,7 +293,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "*" || v == "/" || v == "%")
 	{
-		m_index++;
+		raise();
 
 		tree->emplace_back(v);
 
@@ -314,7 +313,7 @@ begin:
 	auto& v = peek().value;
 	if (v == "^")
 	{
-		m_index++;
+		raise();
 
 		tree->emplace_back(v);
 
@@ -331,7 +330,7 @@ Parser::STreePtr Parser::operand()
 	auto& v = peek().value;
 	if (v == "-" || v == "!")
 	{
-		m_index++;
+		raise();
 
 		tree->emplace_back(v);
 	}
@@ -340,7 +339,7 @@ Parser::STreePtr Parser::operand()
 
 	if (tk.value == "(")
 	{
-		m_index++;
+		raise();
 
 		tree->emplace_back(tk.value);
 
@@ -357,7 +356,7 @@ Parser::STreePtr Parser::operand()
 
 	else if (tk.type == TokenType::Id)
 	{
-		m_index++;
+		raise();
 
 		{
 			STree _tree("id");
@@ -479,7 +478,7 @@ Parser::STreePtr Parser::selStmt()
 				auto& v = peek().value;
 				if (v == "else")
 				{
-					m_index++;
+					raise();
 
 					tree->emplace_back(v);
 

@@ -117,7 +117,7 @@ vector<Token> const& Lexer::tokenize()
 			++m_pos;
 
 			if (m_pos >= m_srcLength)
-				throw "Многострочный комментарий, открытый на стр. " + to_string(m_commentStartLine) + ", не был закрыт";
+				throw "Multiline comment on line " + to_string(m_commentStartLine) + " is not closed";
 			
 		} 
 		
@@ -131,7 +131,7 @@ vector<Token> const& Lexer::tokenize()
 		else if (startedString)
 		{
 			if (c == '\n')
-				throw "Неверный строковый символ в стр. " + to_string(m_currentLine - 1);
+				throw "String literal error in line " + to_string(m_currentLine - 1);
 
 			lexem += c;
 			++m_pos;
@@ -155,24 +155,24 @@ vector<Token> const& Lexer::tokenize()
 				}
 
 				if (m_keywords.contains(lexem))
-					m_tokens.emplace_back(TokenType::Keyword, lexem);
+					m_tokens.emplace_back(TokenType::Keyword, lexem, m_currentLine, m_currentChar);
 
 				else if (m_regex_float.Process(lexem))
-					m_tokens.emplace_back(TokenType::FloatLiteral, lexem);
+					m_tokens.emplace_back(TokenType::FloatLiteral, lexem, m_currentLine, m_currentChar);
 
 				else if (m_regex_int.Process(lexem))
-					m_tokens.emplace_back(TokenType::IntLiteral, lexem);
+					m_tokens.emplace_back(TokenType::IntLiteral, lexem, m_currentLine, m_currentChar);
 
 				else if (m_regex_id.Process(lexem))
-					m_tokens.emplace_back(TokenType::Id, lexem);
+					m_tokens.emplace_back(TokenType::Id, lexem, m_currentLine, m_currentChar);
 
 				else if (m_regex_string.Process(lexem))
 				{
 					if (lexem.length() == 2)
-						m_tokens.emplace_back(TokenType::StringLiteral, "");
+						m_tokens.emplace_back(TokenType::StringLiteral, "", m_currentLine, m_currentChar);
 
 					else
-						m_tokens.emplace_back(TokenType::StringLiteral, string(lexem.begin() + 1, lexem.end() - 1));
+						m_tokens.emplace_back(TokenType::StringLiteral, string(lexem.begin() + 1, lexem.end() - 1), m_currentLine, m_currentChar);
 				}
 						
 				lexem = "";
@@ -190,21 +190,21 @@ vector<Token> const& Lexer::tokenize()
 			{
 				if (lexem == "{") 
 				{
-					m_tokens.emplace_back(TokenType::Separator, "{");
+					m_tokens.emplace_back(TokenType::Separator, "{", m_currentLine, m_currentChar);
 					lexem = "";
 
 				} 
 				
 				else if (lexem == "}")
 				{
-					m_tokens.emplace_back(TokenType::Separator, "}");
+					m_tokens.emplace_back(TokenType::Separator, "}", m_currentLine, m_currentChar);
 					lexem = "";
 
 				} 
 				
 				else if (lexem == ";")
 				{
-					m_tokens.emplace_back(TokenType::Separator, ";");
+					m_tokens.emplace_back(TokenType::Separator, ";", m_currentLine, m_currentChar);
 					lexem = "";
 				}
 
@@ -232,7 +232,7 @@ vector<Token> const& Lexer::tokenize()
 
 				else if (m_operators.contains(lexem) && !m_compounds.contains(lexem + c))
 				{
-					m_tokens.emplace_back(TokenType::Operator, lexem);
+					m_tokens.emplace_back(TokenType::Operator, lexem, m_currentLine, m_currentChar);
 					lexem = "";
 				}
 
@@ -276,7 +276,7 @@ vector<Token> const& Lexer::tokenize()
 
 	catch (string& error)
 	{
-		printf("Ошибка (стр. %zu, с. %zu) : ", m_currentLine, m_currentChar);
+		printf("Error (line %d, symbol %d) : ", m_currentLine, m_currentChar);
 		cerr << error << '\n';
 
 		throw runtime_error("");

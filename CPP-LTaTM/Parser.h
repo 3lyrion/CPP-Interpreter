@@ -22,15 +22,18 @@ private:
 	STreePtr m_tree = nullptr;
 
 	size_t m_index = 0;
+	size_t m_trace = 0;
 
 //	list<STree> m_tempTrees;
 
 private:
-	void seek(size_t offset = 1);
+	void seek();
 
 	Token const& peek();
 
 	void eat(TokenType type);
+
+	void raise();
 
 private:
 	STreePtr program();
