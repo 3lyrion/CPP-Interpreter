@@ -373,6 +373,8 @@ Parser::STreePtr Parser::operand()
 
 		return tree;
 	}
+
+	throw runtime_error("");
 }
 
 Parser::STreePtr Parser::literal()

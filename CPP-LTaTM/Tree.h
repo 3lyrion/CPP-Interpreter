@@ -262,6 +262,7 @@ private:
 			seek();
 		}
 
-		_depth--;
+		if (_depth > 0)
+			_depth--;
 	}
 };

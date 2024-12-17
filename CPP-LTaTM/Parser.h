@@ -24,8 +24,6 @@ private:
 	size_t m_index = 0;
 	size_t m_trace = 0;
 
-//	list<STree> m_tempTrees;
-
 private:
 	void seek();
 
