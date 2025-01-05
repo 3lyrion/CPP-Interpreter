@@ -1,3 +1,5 @@
+#include "Precompiled.h"
+
 #include "Parser.h"
 
 //#include "Tree.h"
@@ -35,6 +37,8 @@ int main()
         print "Рус";            
 
     )")*/;
+
+    setvbuf(stdout, nullptr, _IONBF, 0);
     
     Lexer lexer("input.txt");
     Parser parser(lexer);
@@ -76,7 +80,9 @@ int main()
 
     //tree1.push_back(move(tree2));
 
-//    tree1.print();
+    //tree1.exclude({ 3 });
+
+    //tree1.print();
     
     /*
     auto& tokens = lexer.tokenize();

@@ -22,14 +22,17 @@ public:
 
 	struct Block
 	{
-		bool              wait  = false;
+		bool              skip  = false;
 		vector<string>    ids;
 		vector<ValueInfo> infos;
+
+		bool repeat = false;
 	};
 
 	void openBlock()
 	{
-		if (m_wait)
+		auto& [skip, ids, infos, _] = m_stack.top();
+		if (skip)
 			return;
 
 		m_stack.emplace();
@@ -37,7 +40,8 @@ public:
 
 	void closeBlock()
 	{
-		if (m_wait)
+		auto& [skip, ids, infos, _] = m_stack.top();
+		if (skip)
 			return;
 
 		m_stack.pop();
@@ -45,10 +49,9 @@ public:
 
 	void declare(string const& id, Type type)
 	{
-		if (m_wait)
+		auto& [skip, ids, infos, _] = m_stack.top();
+		if (skip)
 			return;
-
-		auto& [wait, ids, infos] = m_stack.top();
 
 		auto entry = find(ids.cbegin(), ids.cend(), id);
 		if (entry != ids.end())
@@ -62,10 +65,9 @@ public:
 	// Temporary variable
 	void declare(Type type, string const& value)
 	{
-		if (m_wait)
+		auto& [skip, ids, infos, _] = m_stack.top();
+		if (skip)
 			return;
-
-		auto& [wait, ids, infos] = m_stack.top();
 
 		ids.emplace_back();
 		auto& info = infos.emplace_back();
@@ -75,10 +77,9 @@ public:
 
 	void assign(string const& id, Type type, string const& value)
 	{
-		if (m_wait)
+		auto& [skip, ids, infos, _] = m_stack.top();
+		if (skip)
 			return;
-
-		auto& [wait, ids, infos] = m_stack.top();
 
 		auto entry = find(ids.cbegin(), ids.cend(), id);
 		if (entry == ids.end())
@@ -94,10 +95,9 @@ public:
 
 	void assign(string const& id_lhs, string const& id_rhs)
 	{
-		if (m_wait)
+		auto& [skip, ids, infos, _] = m_stack.top();
+		if (skip)
 			return;
-
-		auto& [wait, ids, infos] = m_stack.top();
 
 		auto entry_lhs = find(ids.cbegin(), ids.cend(), id_lhs);
 		if (entry_lhs == ids.end())
@@ -118,10 +118,9 @@ public:
 
 	void execMathOp(char op, string const& id, Type type, string const& value)
 	{
-		if (m_wait)
+		auto& [skip, ids, infos, _] = m_stack.top();
+		if (skip)
 			return;
-
-		auto& [wait, ids, infos] = m_stack.top();
 
 		auto entry = find(ids.cbegin(), ids.cend(), id);
 		if (entry == ids.end())
@@ -139,10 +138,9 @@ public:
 	// Temporary variable
 	void execMathOp(char op, Type type, string const& value)
 	{
-		if (m_wait)
+		auto& [skip, ids, infos, _] = m_stack.top();
+		if (skip)
 			return;
-
-		auto& [wait, ids, infos] = m_stack.top();
 
 		auto& info = infos.back();
 		if (type != info.type)
@@ -153,10 +151,9 @@ public:
 
 	void execLogicOp(string const& op, string const& id, Type type, string const& value)
 	{
-		if (m_wait)
+		auto& [skip, ids, infos, _] = m_stack.top();
+		if (skip)
 			return;
-
-		auto& [wait, ids, infos] = m_stack.top();
 
 		auto entry = find(ids.cbegin(), ids.cend(), id);
 		if (entry == ids.end())
@@ -174,10 +171,9 @@ public:
 	// Temporary variable
 	void execLogicOp(string const& op, Type type, string const& value)
 	{
-		if (m_wait)
+		auto& [skip, ids, infos, _] = m_stack.top();
+		if (skip)
 			return;
-
-		auto& [wait, ids, infos] = m_stack.top();
 
 		auto& info = infos.back();
 		if (type != info.type)
@@ -186,24 +182,35 @@ public:
 		logicOp(op, info, value);
 	}
 
-	void openIfCondition()
+	void openCondition()
 	{
-		if (m_wait)
+		auto& [skip, ids, infos, _] = m_stack.top();
+		if (skip)
 			return;
 
 		m_stack.emplace();
 	}
 
-	void closeIfCondition()
+	void closeCondition()
 	{
-		if (m_wait)
+		auto& [skip, ids, infos, _] = m_stack.top();
+		if (skip)
 			return;
 
 		if (!get<bool>(m_stack.top().infos.back().value))
-			m_wait = true;
+			skip = true;
 
 		m_stack.pop();
 	}
+
+	void openElse()
+	{
+		auto& [skip, ids, infos, _] = m_stack.top();
+		if (skip)
+			skip = false;
+	}
+
+
 
 private:
 	stack<Block> m_stack;
@@ -248,7 +255,7 @@ private:
 
 	void declUninit(Type type)
 	{
-		auto& [wait, ids, infos] = m_stack.top();
+		auto& [skip, ids, infos, _] = m_stack.top();
 
 		ids.emplace_back();
 		auto& _info = infos.emplace_back();
@@ -257,7 +264,7 @@ private:
 
 	void declCopy(ValueInfo& info)
 	{
-		auto& [wait, ids, infos] = m_stack.top();
+		auto& [skip, ids, infos, _] = m_stack.top();
 
 		ids.emplace_back();
 		auto& _info = infos.emplace_back();

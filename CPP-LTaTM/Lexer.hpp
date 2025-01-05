@@ -16,17 +16,31 @@ enum class TokenType
 struct Token
 {
 public:
-	TokenType type;
+	TokenType type = TokenType::Separator;
 	string value;
 	uint32_t line = 0;
 	uint32_t symbol = 0;
+
+	Token(const char value_[]) : 
+		value  (value_) { }
+
+	Token(string const& value_) : 
+		value  (value_) { }
 
 	Token(TokenType type_, string const& value_, uint32_t line_, uint32_t symbol_) : 
 		type   (type_),
 		value  (value_),
 		line   (line_),
 		symbol (symbol_) { }
+	
+	friend ostream& operator << (ostream&, Token const&);
 };
+
+inline ostream& operator << (ostream& os, Token const& token)
+{
+	os << token.value;
+	return os;
+}
 
 class Lexer
 {

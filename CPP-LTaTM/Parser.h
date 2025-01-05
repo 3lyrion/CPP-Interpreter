@@ -8,21 +8,27 @@ class Parser
 public:
 	Parser(Lexer& theLexer);
 
-	void parse();
+	Tree<Token> const& parse();
 
 private:
-	using STree    = Tree<string>;
-	using STreePtr = uptr<STree>;
+	using TTree    = Tree<Token>;
+	using TTreePtr = uptr<TTree>;
 
 	Lexer& lexer;
 
 	vector<Token> const* tokens = nullptr;
 	Token         const* token  = nullptr;
 
-	STreePtr m_tree = nullptr;
+	TTreePtr m_tree = nullptr;
 
 	size_t m_index = 0;
 	size_t m_trace = 0;
+
+	unordered_set<string> m_exclude =
+	{
+		"block", "typeSpec", "expression", "logic1",
+		"logic2", "logic3", "term", "factor"
+	};
 
 private:
 	void seek();
@@ -34,40 +40,40 @@ private:
 	void raise();
 
 private:
-	STreePtr program();
+	TTreePtr program();
 
-	STreePtr declaration();
+	TTreePtr declaration();
 
-	STreePtr typeSpec();
+	TTreePtr typeSpec();
 
-	STreePtr expression();
+	TTreePtr expression();
 
-	STreePtr logic1();
+	TTreePtr logic1();
 
-	STreePtr logic2();
+	TTreePtr logic2();
 
-	STreePtr logic3();
+	TTreePtr logic3();
 
-	STreePtr term();
+	TTreePtr term();
 
-	STreePtr factor();
+	TTreePtr factor();
 
-	STreePtr power();
+	TTreePtr power();
 
-	STreePtr operand();
+	TTreePtr operand();
 
-	STreePtr literal();
+	TTreePtr literal();
 
-	STreePtr statement();
+	TTreePtr statement();
 
-	STreePtr selStmt();
+	TTreePtr selStmt();
 
-	STreePtr block();
+	TTreePtr block();
 
-	STreePtr iterStmt();
+	TTreePtr iterStmt();
 
-	STreePtr printStmt();
+	TTreePtr printStmt();
 
-	STreePtr exprStmt();
+	TTreePtr exprStmt();
 };
 

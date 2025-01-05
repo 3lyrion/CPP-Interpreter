@@ -1,15 +1,17 @@
 #include "Parser.h"
 
+#include "Precompiled.h"
+
 Parser::Parser(Lexer& theLexer) : 
 	lexer(theLexer)
 {
 
 }
 
-void Parser::parse()
+Tree<Token> const& Parser::parse()
 {
-	try 
-	{
+//	try 
+//	{
 		tokens = &lexer.tokenize();
 		
 		m_tree = program();
@@ -22,11 +24,15 @@ void Parser::parse()
 		}
 		else
 			m_tree->print();
-	}
-	catch (runtime_error e)
-	{
 
-	}
+		return *m_tree;
+//	}
+//	catch (runtime_error e)
+//	{
+//		cout << e.what() << '\n';
+
+	//	return nullptr;
+//	}
 }
 
 
@@ -62,9 +68,9 @@ void Parser::raise()
 	m_index++;
 }
 
-Parser::STreePtr Parser::program()
+Parser::TTreePtr Parser::program()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 	while (true)
 	{
@@ -92,19 +98,19 @@ Parser::STreePtr Parser::program()
 	}
 }
 
-Parser::STreePtr Parser::declaration()
+Parser::TTreePtr Parser::declaration()
 {
 	auto index = m_index;
 
 	try
 	{
-		auto tree = make_unique<STree>(__func__);
+		auto tree = make_unique<TTree>(__func__);
 
 		tree->push_back(move(*typeSpec().release()));
 
 		eat(TokenType::Id);
 		{
-			STree _tree("id");
+			TTree _tree("id");
 			_tree.emplace_back(token->value);
 			tree->push_back(move(_tree));
 		}
@@ -129,7 +135,7 @@ Parser::STreePtr Parser::declaration()
 
 	catch (...)
 	{
-		auto tree = make_unique<STree>(__func__);
+		auto tree = make_unique<TTree>(__func__);
 
 		m_index = index;
 
@@ -142,7 +148,7 @@ Parser::STreePtr Parser::declaration()
 
 			eat(TokenType::Id);
 			{
-				STree _tree("id");
+				TTree _tree("id");
 				_tree.emplace_back(token->value);
 				tree->push_back(move(_tree));
 			}
@@ -167,9 +173,9 @@ Parser::STreePtr Parser::declaration()
 	throw runtime_error("");
 }
 
-Parser::STreePtr Parser::typeSpec()
+Parser::TTreePtr Parser::typeSpec()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 	eat(TokenType::Keyword);
 	auto& v = token->value;
@@ -183,9 +189,9 @@ Parser::STreePtr Parser::typeSpec()
 	throw runtime_error("");
 }
 
-Parser::STreePtr Parser::expression()
+Parser::TTreePtr Parser::expression()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 begin:
 	tree->push_back(move(*logic1().release()));
@@ -203,9 +209,9 @@ begin:
 	return tree;
 }
 
-Parser::STreePtr Parser::logic1()
+Parser::TTreePtr Parser::logic1()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 begin:
 	tree->push_back(move(*logic2().release()));
@@ -223,9 +229,9 @@ begin:
 	return tree;
 }
 
-Parser::STreePtr Parser::logic2()
+Parser::TTreePtr Parser::logic2()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 begin:
 	tree->push_back(move(*logic3().release()));
@@ -243,9 +249,9 @@ begin:
 	return tree;
 }
 
-Parser::STreePtr Parser::logic3()
+Parser::TTreePtr Parser::logic3()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 begin:
 	tree->push_back(move(*term().release()));
@@ -263,9 +269,9 @@ begin:
 	return tree;
 }
 
-Parser::STreePtr Parser::term()
+Parser::TTreePtr Parser::term()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 begin:
 	tree->push_back(move(*factor().release()));
@@ -283,9 +289,9 @@ begin:
 	return tree;
 }
 
-Parser::STreePtr Parser::factor()
+Parser::TTreePtr Parser::factor()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 begin:
 	tree->push_back(move(*power().release()));
@@ -303,9 +309,9 @@ begin:
 	return tree;
 }
 
-Parser::STreePtr Parser::power()
+Parser::TTreePtr Parser::power()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 begin:
 	tree->push_back(move(*operand().release()));
@@ -323,9 +329,9 @@ begin:
 	return tree;
 }
 
-Parser::STreePtr Parser::operand()
+Parser::TTreePtr Parser::operand()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 	auto& v = peek().value;
 	if (v == "-" || v == "!")
@@ -359,7 +365,7 @@ Parser::STreePtr Parser::operand()
 		raise();
 
 		{
-			STree _tree("id");
+			TTree _tree("id");
 			_tree.emplace_back(tk.value);
 			tree->push_back(move(_tree));
 		}
@@ -377,9 +383,9 @@ Parser::STreePtr Parser::operand()
 	throw runtime_error("");
 }
 
-Parser::STreePtr Parser::literal()
+Parser::TTreePtr Parser::literal()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 	seek();
 
@@ -421,9 +427,9 @@ Parser::STreePtr Parser::literal()
 	throw runtime_error("");
 }
 
-Parser::STreePtr Parser::statement()
+Parser::TTreePtr Parser::statement()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 	auto index = m_index;
 
@@ -454,9 +460,9 @@ Parser::STreePtr Parser::statement()
 	return tree;
 }
 
-Parser::STreePtr Parser::selStmt()
+Parser::TTreePtr Parser::selStmt()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 	eat(TokenType::Keyword);
 	if (token->value == "if")
@@ -495,9 +501,9 @@ Parser::STreePtr Parser::selStmt()
 	throw runtime_error("");
 }
 
-Parser::STreePtr Parser::block()
+Parser::TTreePtr Parser::block()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 	eat(TokenType::Separator);
 	if (token->value == "{")
@@ -518,9 +524,9 @@ Parser::STreePtr Parser::block()
 	throw runtime_error("");
 }
 
-Parser::STreePtr Parser::iterStmt()
+Parser::TTreePtr Parser::iterStmt()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 	eat(TokenType::Keyword);
 	if (token->value == "while")
@@ -549,9 +555,9 @@ Parser::STreePtr Parser::iterStmt()
 	throw runtime_error("");
 }
 
-Parser::STreePtr Parser::printStmt()
+Parser::TTreePtr Parser::printStmt()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 	eat(TokenType::Keyword);
 	if (token->value == "print")
@@ -572,13 +578,13 @@ Parser::STreePtr Parser::printStmt()
 	throw runtime_error("");
 }
 
-Parser::STreePtr Parser::exprStmt()
+Parser::TTreePtr Parser::exprStmt()
 {
-	auto tree = make_unique<STree>(__func__);
+	auto tree = make_unique<TTree>(__func__);
 
 	eat(TokenType::Id);
 	{
-		STree _tree("id");
+		TTree _tree("id");
 		_tree.emplace_back(token->value);
 		tree->push_back(move(_tree));
 	}

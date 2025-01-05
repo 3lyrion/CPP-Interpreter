@@ -189,6 +189,13 @@ public:
 		return false;
 	}
 
+	void exclude(unordered_set<T> const& values)
+	{
+		begin();
+
+		_exclude(m_node, values);
+	}
+
 	size_t size() const
 	{
 		return m_size;
@@ -225,6 +232,69 @@ private:
 
 			delete ch;
 		}
+	}
+
+	void _clear(Node* node)
+	{
+		node->childs.remove_if(
+			[this](auto ch)
+			{
+				_clear(ch);
+
+				delete ch;
+
+				return true;
+			}
+		);
+	}
+
+	void _exclude(Node* node, unordered_set<T> const& values)
+	{
+		node->childs.remove_if(
+			[this, node, &values](auto ch)
+			{
+				_exclude(ch, values);
+
+				if (values.contains(ch->value))
+				{
+				//	_clear(ch);
+
+					for (auto _ch : ch->childs)
+					{
+						_ch->back = node;
+						node->childs.push_back(_ch);
+					}
+
+					delete ch;
+					
+					return true;
+				}
+
+				return false;
+			}
+		);
+
+		//for (auto& ch : node->childs)
+		//{
+		//	_exclude(ch, values);
+
+		//	//cout << ch->value << '\n';
+
+		//	//if (values.contains(ch->value))
+		//	//{
+		//	//	auto  _ch     = ch;
+		//	//	auto& _childs = ch->back->childs;
+		//	//	_childs.erase(find(_childs.cbegin(), _childs.cend(), ch));
+
+		//	//	_clear(_ch);
+
+		//	//	cout << _ch->value << '\n';
+
+		//	//	delete _ch;
+		//	//}
+
+		//	cout << ch->value << '\n';
+		//}
 	}
 
 private:
