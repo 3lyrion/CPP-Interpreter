@@ -118,7 +118,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>Precompiled.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -149,6 +149,7 @@
   <ItemGroup>
     <ClCompile Include="CPP-LTaTM.cpp" />
     <ClCompile Include="DFA.cpp" />
+    <ClCompile Include="Context.cpp" />
     <ClCompile Include="Lexer.cpp" />
     <ClCompile Include="LexerRegex.cpp" />
     <ClCompile Include="Old.cpp" />
@@ -157,6 +158,7 @@
   <ItemGroup>
     <ClInclude Include="BinTree.h" />
     <ClInclude Include="DFA.hpp" />
+    <ClInclude Include="Context.h" />
     <ClInclude Include="Lexer.hpp" />
     <ClInclude Include="Parser.h" />
     <ClInclude Include="Precompiled.h" />

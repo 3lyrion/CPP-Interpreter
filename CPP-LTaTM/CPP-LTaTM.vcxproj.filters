@@ -29,6 +29,9 @@
     <ClCompile Include="Parser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Context.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DFA.hpp">
@@ -49,5 +52,6 @@
     <ClInclude Include="Tree.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Context.h" />
   </ItemGroup>
 </Project>
