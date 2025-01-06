@@ -24,10 +24,11 @@ private:
 	size_t m_index = 0;
 	size_t m_trace = 0;
 
-	unordered_set<string> m_exclude =
+	unordered_set<Token, TokenHash> m_exclude =
 	{
-		"block", "typeSpec", "expression", "logic1",
-		"logic2", "logic3", "term", "factor"
+		"const", "program", "block", "statement", "typeSpec",
+		"logic1", "logic2", "logic3", "term", "factor", "power", "operand",
+		"literal", "iterStmt", "selStmt", "printStmt", "exprStmt"
 	};
 
 private:

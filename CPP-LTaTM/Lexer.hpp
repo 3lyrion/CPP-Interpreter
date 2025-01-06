@@ -32,6 +32,22 @@ public:
 		value  (value_),
 		line   (line_),
 		symbol (symbol_) { }
+
+	inline bool operator == (Token const& token) const
+	{
+		if (type == token.type && value == token.value)
+			return true;
+
+		return false;
+	}
+
+	inline bool operator != (Token const& token) const
+	{
+		if (type != token.type || value != token.value)
+			return true;
+
+		return false;
+	}
 	
 	friend ostream& operator << (ostream&, Token const&);
 };
@@ -41,6 +57,16 @@ inline ostream& operator << (ostream& os, Token const& token)
 	os << token.value;
 	return os;
 }
+
+struct TokenHash
+{
+	inline size_t operator () (Token const& token) const
+	{
+		return hash<int>()(int(token.type)) ^ hash<string>()(token.value);
+	}
+};
+
+
 
 class Lexer
 {

@@ -148,9 +148,64 @@ public:
 	{
 		while (m_node->back)
 			m_node = m_node->back;
+
+		m_index = 0ull;
 	}
 
-	bool go_back()
+	bool front()
+	{
+		if (m_node->back)
+		{
+			m_node  = m_node->back->childs.front();
+			m_index = 0ull;
+			return true;
+		}
+
+		return false;
+	}
+
+	bool back()
+	{
+		if (m_node->back)
+		{
+			auto& childs = m_node->back->childs;
+			m_node = childs.back();
+			m_index = childs.size() - 1ull;
+			return true;
+		}
+
+		return false;
+	}
+
+	bool prev()
+	{
+		if (m_node->back && m_index != 0ull)
+		{
+			auto& childs = m_node->back->childs;
+			auto it = childs.begin();
+			advance(it, --m_index);
+			m_node = *it;
+			return true;
+		}
+
+		return false;
+	}
+
+	bool next()
+	{
+		if (m_node->back && m_index < m_node->back->childs.size() - 1ull)
+		{
+			auto& childs = m_node->back->childs;
+			auto it = childs.begin();
+			advance(it, ++m_index);
+			m_node = *it;
+			return true;
+		}
+
+		return false;
+	}
+
+	bool up()
 	{
 		if (m_node->back)
 		{
@@ -162,34 +217,20 @@ public:
 		return false;
 	}
 
-	void front()
-	{
-		m_node = m_node->childs.front();
-	}
-
-	void back()
-	{
-		m_node = m_node->childs.back();
-	}
-
-	bool select(uint32_t index)
+	bool down()
 	{
 		auto& childs = m_node->childs;
-
-		if (index < childs.size())
+		if (!childs.empty())
 		{
-			auto it = childs.begin();
-			advance(it, index);
-
-			m_node = *it;
-
+			m_node = childs.front();
 			return true;
 		}
 
 		return false;
 	}
 
-	void exclude(unordered_set<T> const& values)
+	template <typename Hash>
+	constexpr void exclude(unordered_set<T, Hash> const& values)
 	{
 		begin();
 
@@ -216,6 +257,8 @@ public:
 	
 private:
 	Node* m_node = nullptr;
+
+	size_t m_index = 0;
 
 	size_t m_size = 0;
 
@@ -248,17 +291,17 @@ private:
 		);
 	}
 
-	void _exclude(Node* node, unordered_set<T> const& values)
+	template <typename Hash>
+	constexpr void _exclude(Node* node, unordered_set<T, Hash> const& values)
 	{
-		node->childs.remove_if(
+		/*auto& childs = node->childs;
+		auto it = remove_if(childs.rbegin(), childs.rend(),
 			[this, node, &values](auto ch)
 			{
 				_exclude(ch, values);
 
 				if (values.contains(ch->value))
 				{
-				//	_clear(ch);
-
 					for (auto _ch : ch->childs)
 					{
 						_ch->back = node;
@@ -274,27 +317,73 @@ private:
 			}
 		);
 
-		//for (auto& ch : node->childs)
-		//{
-		//	_exclude(ch, values);
+		childs.erase(it.base(), childs.end());*/
 
-		//	//cout << ch->value << '\n';
+		/*for (auto it = node->childs.rbegin(); it != node->childs.rend(); )
+		{
+			auto ch = *it;
 
-		//	//if (values.contains(ch->value))
-		//	//{
-		//	//	auto  _ch     = ch;
-		//	//	auto& _childs = ch->back->childs;
-		//	//	_childs.erase(find(_childs.cbegin(), _childs.cend(), ch));
+			_exclude(ch, values);
 
-		//	//	_clear(_ch);
+			if (values.contains(ch->value))
+			{
+				for (auto _ch : ch->childs)
+				{
+					_ch->back = node;
+					node->childs.push_back(_ch);
+				}
 
-		//	//	cout << _ch->value << '\n';
+				delete ch;
 
-		//	//	delete _ch;
-		//	//}
+				auto _it = it;
+				advance(_it, 1ull);
+					
+				it = decltype(it)(node->childs.erase(_it.base()));
+			}
 
-		//	cout << ch->value << '\n';
-		//}
+			else
+				++it;
+		}*/
+
+		node->childs.remove_if(
+			[this, node, &values](auto ch)
+			{
+				_exclude(ch, values);
+
+				if (values.contains(ch->value))
+				{
+					/*auto& childs = ch->childs;
+					for_each(childs.rbegin(), childs.rend(),
+						[node](auto _ch)
+						{
+							_ch->back = node;
+							node->childs.push_front(_ch);
+						}
+					);*/
+
+					for (auto _ch : ch->childs)
+					{
+						_ch->back = node;
+
+
+
+					//	node->childs.push_back(_ch);
+					}
+					auto& childs = node->childs;
+					auto it = find(childs.begin(), childs.end(), ch);
+					//it = childs.erase(it);
+					childs.insert(it, ch->childs.begin(), ch->childs.end());
+
+					delete ch;
+
+
+					
+					return true;
+				}
+
+				return false;
+			}
+		);
 	}
 
 private:

@@ -44,6 +44,20 @@ int main()
     Parser parser(lexer);
     parser.parse();
     
+ //   list<int> l1 { 1, 2, 5 };
+ //   list<int> l2 { 2, 3, 4 };
+
+	//auto it = find(l1.begin(), l1.end(), 2);
+	//it = l1.erase(it);
+	//l1.insert(it, l2.begin(), l2.end());
+ //   
+ //   for (auto it = l.rbegin(); it != l.rend(); )
+	//{
+	//	auto ch = *it;
+
+	//		it = (decltype(it))(l.erase(--it.base()));
+	//}
+
     /*auto lexer = make_unique<Lexer>("input.txt");
     auto parser = make_unique<Parser>(*lexer);
     parser->parse();*/

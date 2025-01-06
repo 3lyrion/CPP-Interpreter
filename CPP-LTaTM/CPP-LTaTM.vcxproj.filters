@@ -53,5 +53,6 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="Context.h" />
+    <ClInclude Include="Viewer.h" />
   </ItemGroup>
 </Project>

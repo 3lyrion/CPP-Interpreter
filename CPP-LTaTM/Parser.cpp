@@ -23,7 +23,10 @@ Tree<Token> const& Parser::parse()
 			printf("Unexpected token (l. %d, s. %d) : '%s'\n", token.line, token.symbol, token.value.c_str());
 		}
 		else
+		{
+			m_tree->exclude(m_exclude);
 			m_tree->print();
+		}
 
 		return *m_tree;
 //	}
