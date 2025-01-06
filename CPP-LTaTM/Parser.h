@@ -1,42 +1,42 @@
 #pragma once
 
 #include "Lexer.hpp"
-#include "Tree.h"
+#include "Shell.h"
 
 class Parser
 {
 public:
 	Parser(Lexer& theLexer);
 
-	Tree<Token> const& parse();
+	Tree<Shell::Token> const& parse();
 
 private:
-	using TTree    = Tree<Token>;
+	using TTree    = Tree<Shell::Token>;
 	using TTreePtr = uptr<TTree>;
 
 	Lexer& lexer;
 
-	vector<Token> const* tokens = nullptr;
-	Token         const* token  = nullptr;
+	vector<Lexer::Token> const* tokens = nullptr;
+	Lexer::Token         const* token  = nullptr;
 
 	TTreePtr m_tree = nullptr;
 
 	size_t m_index = 0;
 	size_t m_trace = 0;
 
-	unordered_set<Token, TokenHash> m_exclude =
+	unordered_set<Shell::Token, Shell::Token::Hash> m_exclude =
 	{
 		"const", "program", "block", "statement", "typeSpec",
 		"logic1", "logic2", "logic3", "term", "factor", "power", "operand",
-		"literal", "iterStmt", "selStmt", "printStmt", "exprStmt"
+		"literal"/*, "iterStmt", "selStmt", "printStmt", "exprStmt"*/
 	};
 
 private:
 	void seek();
 
-	Token const& peek();
+	Lexer::Token const& peek();
 
-	void eat(TokenType type);
+	void eat(Lexer::Token::Type type);
 
 	void raise();
 

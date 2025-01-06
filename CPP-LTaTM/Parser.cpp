@@ -2,13 +2,15 @@
 
 #include "Precompiled.h"
 
+using Type = Shell::Token::Type;
+
 Parser::Parser(Lexer& theLexer) : 
 	lexer(theLexer)
 {
 
 }
 
-Tree<Token> const& Parser::parse()
+Tree<Shell::Token> const& Parser::parse()
 {
 //	try 
 //	{
@@ -49,7 +51,7 @@ void Parser::seek()
 	raise();
 }
 
-Token const& Parser::peek()
+Lexer::Token const& Parser::peek()
 {
 	if (m_index > tokens->size() - 1)
 		throw "";
@@ -57,7 +59,7 @@ Token const& Parser::peek()
 	return (*tokens)[m_index];
 }
 
-void Parser::eat(TokenType type)
+void Parser::eat(Lexer::Lexer::Token::Type type)
 {
 	seek();
 
@@ -107,11 +109,11 @@ Parser::TTreePtr Parser::declaration()
 
 	try
 	{
-		auto tree = make_unique<TTree>(__func__);
+		auto tree = make_unique<TTree>(Type::Declaration);
 
 		tree->push_back(move(*typeSpec().release()));
 
-		eat(TokenType::Id);
+		eat(Lexer::Token::Type::Id);
 		{
 			TTree _tree("id");
 			_tree.emplace_back(token->value);
@@ -127,7 +129,7 @@ Parser::TTreePtr Parser::declaration()
 			tree->push_back(move(*expression().release()));
 		}
 
-		eat(TokenType::Separator);
+		eat(Lexer::Token::Type::Separator);
 		if (token->value == ";")
 		{
 			tree->emplace_back(token->value);
@@ -138,31 +140,31 @@ Parser::TTreePtr Parser::declaration()
 
 	catch (...)
 	{
-		auto tree = make_unique<TTree>(__func__);
+		auto tree = make_unique<TTree>(Type::Declaration);
 
 		m_index = index;
 
-		eat(TokenType::Keyword);
+		eat(Lexer::Token::Type::Keyword);
 		if (token->value == "const")
 		{
 			tree->emplace_back(token->value);
 
 			tree->push_back(move(*typeSpec().release()));
 
-			eat(TokenType::Id);
+			eat(Lexer::Token::Type::Id);
 			{
 				TTree _tree("id");
 				_tree.emplace_back(token->value);
 				tree->push_back(move(_tree));
 			}
 
-			eat(TokenType::Operator);
+			eat(Lexer::Token::Type::Operator);
 			if (token->value == "=")
 			{
 				tree->emplace_back(token->value);
 				tree->push_back(move(*expression().release()));
 
-				eat(TokenType::Separator);
+				eat(Lexer::Token::Type::Separator);
 				if (token->value == ";")
 				{
 					tree->emplace_back(token->value);
@@ -180,7 +182,7 @@ Parser::TTreePtr Parser::typeSpec()
 {
 	auto tree = make_unique<TTree>(__func__);
 
-	eat(TokenType::Keyword);
+	eat(Lexer::Token::Type::Keyword);
 	auto& v = token->value;
 	if (v == "bool" || v == "float" || v == "int" || v == "string")
 	{
@@ -194,7 +196,7 @@ Parser::TTreePtr Parser::typeSpec()
 
 Parser::TTreePtr Parser::expression()
 {
-	auto tree = make_unique<TTree>(__func__);
+	auto tree = make_unique<TTree>(Type::Expression);
 
 begin:
 	tree->push_back(move(*logic1().release()));
@@ -354,7 +356,7 @@ Parser::TTreePtr Parser::operand()
 
 		tree->push_back(move(*expression().release()));
 
-		eat(TokenType::Operator);
+		eat(Lexer::Token::Type::Operator);
 		if (token->value == ")")
 		{
 			tree->emplace_back(token->value);
@@ -363,7 +365,7 @@ Parser::TTreePtr Parser::operand()
 		}
 	}
 
-	else if (tk.type == TokenType::Id)
+	else if (tk.type == Lexer::Token::Type::Id)
 	{
 		raise();
 
@@ -392,21 +394,21 @@ Parser::TTreePtr Parser::literal()
 
 	seek();
 
-	if (token->type == TokenType::FloatLiteral)
+	if (token->type == Lexer::Token::Type::FloatLiteral)
 	{
 		tree->emplace_back(token->value);
 
 		return tree;
 	}
 
-	if (token->type == TokenType::IntLiteral)
+	if (token->type == Lexer::Token::Type::IntLiteral)
 	{
 		tree->emplace_back(token->value);
 
 		return tree;
 	}
 
-	if (token->type == TokenType::StringLiteral)
+	if (token->type == Lexer::Token::Type::StringLiteral)
 	{
 		tree->emplace_back(token->value);
 
@@ -465,21 +467,21 @@ Parser::TTreePtr Parser::statement()
 
 Parser::TTreePtr Parser::selStmt()
 {
-	auto tree = make_unique<TTree>(__func__);
+	auto tree = make_unique<TTree>(Type::SelectionStatement);
 
-	eat(TokenType::Keyword);
+	eat(Lexer::Token::Type::Keyword);
 	if (token->value == "if")
 	{
 		tree->emplace_back(token->value);
 
-		eat(TokenType::Operator);
+		eat(Lexer::Token::Type::Operator);
 		if (token->value == "(")
 		{
 			tree->emplace_back(token->value);
 
 			tree->push_back(move(*expression().release()));
 
-			eat(TokenType::Operator);
+			eat(Lexer::Token::Type::Operator);
 			if (token->value == ")")
 			{
 				tree->emplace_back(token->value);
@@ -508,14 +510,14 @@ Parser::TTreePtr Parser::block()
 {
 	auto tree = make_unique<TTree>(__func__);
 
-	eat(TokenType::Separator);
+	eat(Lexer::Token::Type::Separator);
 	if (token->value == "{")
 	{
 		tree->emplace_back(token->value);
 
 		tree->push_back(move(*program().release()));
 
-		eat(TokenType::Separator);
+		eat(Lexer::Token::Type::Separator);
 		if (token->value == "}")
 		{
 			tree->emplace_back(token->value);
@@ -529,21 +531,21 @@ Parser::TTreePtr Parser::block()
 
 Parser::TTreePtr Parser::iterStmt()
 {
-	auto tree = make_unique<TTree>(__func__);
+	auto tree = make_unique<TTree>(Type::IterationStatement);
 
-	eat(TokenType::Keyword);
+	eat(Lexer::Token::Type::Keyword);
 	if (token->value == "while")
 	{
 		tree->emplace_back(token->value);
 
-		eat(TokenType::Operator);
+		eat(Lexer::Token::Type::Operator);
 		if (token->value == "(")
 		{
 			tree->emplace_back(token->value);
 
 			tree->push_back(move(*expression().release()));
 
-			eat(TokenType::Operator);
+			eat(Lexer::Token::Type::Operator);
 			if (token->value == ")")
 			{
 				tree->emplace_back(token->value);
@@ -560,16 +562,16 @@ Parser::TTreePtr Parser::iterStmt()
 
 Parser::TTreePtr Parser::printStmt()
 {
-	auto tree = make_unique<TTree>(__func__);
+	auto tree = make_unique<TTree>(Type::PrintStatement);
 
-	eat(TokenType::Keyword);
+	eat(Lexer::Token::Type::Keyword);
 	if (token->value == "print")
 	{
 		tree->emplace_back(token->value);
 
 		tree->push_back(move(*expression().release()));
 
-		eat(TokenType::Separator);
+		eat(Lexer::Token::Type::Separator);
 		if (token->value == ";")
 		{
 			tree->emplace_back(token->value);
@@ -583,23 +585,23 @@ Parser::TTreePtr Parser::printStmt()
 
 Parser::TTreePtr Parser::exprStmt()
 {
-	auto tree = make_unique<TTree>(__func__);
+	auto tree = make_unique<TTree>(Type::ExpressionStatement);
 
-	eat(TokenType::Id);
+	eat(Lexer::Token::Type::Id);
 	{
 		TTree _tree("id");
 		_tree.emplace_back(token->value);
 		tree->push_back(move(_tree));
 	}
 
-	eat(TokenType::Operator);
+	eat(Lexer::Token::Type::Operator);
 	if (token->value == "=")
 	{
 		tree->emplace_back(token->value);
 
 		tree->push_back(move(*expression().release()));
 
-		eat(TokenType::Separator);
+		eat(Lexer::Token::Type::Separator);
 		if (token->value == ";")
 		{
 			tree->emplace_back(token->value);

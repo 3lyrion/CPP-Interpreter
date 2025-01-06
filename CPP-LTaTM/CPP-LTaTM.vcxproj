@@ -163,6 +163,7 @@
     <ClInclude Include="Lexer.hpp" />
     <ClInclude Include="Parser.h" />
     <ClInclude Include="Precompiled.h" />
+    <ClInclude Include="Shell.h" />
     <ClInclude Include="Tree.h" />
     <ClInclude Include="Viewer.h" />
   </ItemGroup>

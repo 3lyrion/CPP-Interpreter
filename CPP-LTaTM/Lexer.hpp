@@ -2,96 +2,96 @@
 
 #include "DFA.hpp"
 
-enum class TokenType
-{
-	Id = 0,
-	Operator,
-	FloatLiteral,
-	IntLiteral,
-	StringLiteral,
-	Separator,
-	Keyword
-};
 
-struct Token
-{
-public:
-	TokenType type = TokenType::Separator;
-	string value;
-	uint32_t line = 0;
-	uint32_t symbol = 0;
 
-	Token(const char value_[]) : 
-		value  (value_) { }
 
-	Token(string const& value_) : 
-		value  (value_) { }
 
-	Token(TokenType type_, string const& value_, uint32_t line_, uint32_t symbol_) : 
-		type   (type_),
-		value  (value_),
-		line   (line_),
-		symbol (symbol_) { }
 
-	inline bool operator == (Token const& token) const
-	{
-		if (type == token.type && value == token.value)
-			return true;
-
-		return false;
-	}
-
-	inline bool operator != (Token const& token) const
-	{
-		if (type != token.type || value != token.value)
-			return true;
-
-		return false;
-	}
-	
-	friend ostream& operator << (ostream&, Token const&);
-};
-
-inline ostream& operator << (ostream& os, Token const& token)
-{
-	os << token.value;
-	return os;
-}
-
-struct TokenHash
-{
-	inline size_t operator () (Token const& token) const
-	{
-		return hash<int>()(int(token.type)) ^ hash<string>()(token.value);
-	}
-};
+//
+//struct TokenHash
+//{
+//	inline size_t operator () (Token const& token) const
+//	{
+//		return hash<int>()(int(token.type)) ^ hash<string>()(token.value);
+//	}
+//};
 
 
 
 class Lexer
 {
 public:
+	struct Token
+	{
+	public:
+		enum class Type
+		{
+			Id = 0,
+			Operator,
+			FloatLiteral,
+			IntLiteral,
+			StringLiteral,
+			Separator,
+			Keyword
+		};
+
+		Type type = Type::Separator;
+		string value;
+		uint32_t line = 0;
+		uint32_t symbol = 0;
+
+		Token(const char value_[]) : 
+			value  (value_) { }
+
+		Token(string const& value_) : 
+			value  (value_) { }
+
+		Token(Type type_, string const& value_, uint32_t line_, uint32_t symbol_) : 
+			type   (type_),
+			value  (value_),
+			line   (line_),
+			symbol (symbol_) { }
+
+		inline bool operator == (Token const& token) const
+		{
+			if (type == token.type && value == token.value)
+				return true;
+
+			return false;
+		}
+
+		inline bool operator != (Token const& token) const
+		{
+			if (type != token.type || value != token.value)
+				return true;
+
+			return false;
+		}
+	
+		friend ostream& operator << (ostream&, Token const&);
+	};
+
 	Lexer(filesystem::path srcPath);
 
 	vector<Token> const& tokenize();
 	
-	inline static string tokenTypeToString(TokenType type)
+	inline static string tokenTypeToString(Token::Type type)
 	{
 		switch (type)
         {
-        case TokenType::Id: return "Идентификатор";
+        case Token::Type::Id: return "Идентификатор";
             break;
-        case TokenType::Operator: return "Оператор";
+        case Token::Type::Operator: return "Оператор";
             break;
-        case TokenType::FloatLiteral: return "Литерал (float)";
+        case Token::Type::FloatLiteral: return "Литерал (float)";
             break;
-        case TokenType::IntLiteral: return "Литерал (int)";
+        case Token::Type::IntLiteral: return "Литерал (int)";
             break;
-        case TokenType::StringLiteral: return "Литерал (string)";
+        case Token::Type::StringLiteral: return "Литерал (string)";
             break;
-        case TokenType::Separator: return "Разделитель";
+        case Token::Type::Separator: return "Разделитель";
             break;
-        case TokenType::Keyword: return "Ключевое слово";
+        case Token::Type::Keyword: return "Ключевое слово";
             break;
         default:
             break;
@@ -131,3 +131,9 @@ private:
 
 	bool isNumber(char c);
 };
+
+inline ostream& operator << (ostream& os, Lexer::Token const& token)
+{
+	os << token.value;
+	return os;
+}

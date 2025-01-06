@@ -54,5 +54,6 @@
     </ClInclude>
     <ClInclude Include="Context.h" />
     <ClInclude Include="Viewer.h" />
+    <ClInclude Include="Shell.h" />
   </ItemGroup>
 </Project>
