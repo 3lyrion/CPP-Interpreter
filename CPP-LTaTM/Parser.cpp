@@ -30,7 +30,7 @@ Parser::TTreePtr Parser::parse()
 		else
 		{
 			m_tree->exclude(m_exclude);
-			m_tree->print();
+//			m_tree->print();
 		}
 
 		return move(m_tree);

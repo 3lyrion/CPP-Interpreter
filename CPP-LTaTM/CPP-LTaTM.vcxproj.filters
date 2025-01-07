@@ -29,7 +29,7 @@
     <ClCompile Include="Parser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Context.cpp">
+    <ClCompile Include="Shell.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -52,8 +52,6 @@
     <ClInclude Include="Tree.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="Context.h" />
-    <ClInclude Include="Viewer.h" />
     <ClInclude Include="Shell.h" />
   </ItemGroup>
 </Project>

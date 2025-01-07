@@ -1,0 +1,970 @@
+#include "Shell.h"
+
+void Shell::interpet(Tree<Token>& theTree)
+{
+	tree = &theTree;
+
+	openBlock();
+
+	tree->begin();
+	tree->down();
+
+	while (true)
+	{
+		auto& token = tree->get();
+
+//		cout << token << '\n';
+
+		if (auto type = token.getType())
+		{
+			switch (*type)
+			{
+			case Token::Type::Declaration:
+				declaration();
+			break;
+
+			case Token::Type::Expression:
+				expression();
+			break;
+
+			case Token::Type::ExpressionStatement:
+				expressionStatement();
+			break;
+
+			case Token::Type::IterationStatement:
+				iterationStatement();
+			break;
+
+			case Token::Type::PrintStatement:
+				printStatement();
+			break;
+
+			case Token::Type::SelectionStatement:
+				selectionStatement();
+			break;
+
+			default:
+				break;
+			}
+		}
+
+		else
+		{
+			auto& text = token.getValue()->text;
+
+			if (text[0] == '{')
+				openBlock();
+
+			else if (text[0] == '}')
+				closeBlock();
+		}
+
+		if (!tree->next())
+		{
+			auto& back = m_blocks.back();
+			// Если доступен возврат к условию
+			if (back.depth != 0ull)
+			{
+				do
+				{
+					tree->up();
+					back.depth--;
+				}
+				while (back.depth != 0ull);
+
+				m_blocks.pop_back();
+
+				while (true)
+				{
+					tree->prev();
+					auto& token = tree->get();
+
+					if (auto type = token.getType())
+					{
+						if (*type == Token::Type::IterationStatement)
+							break;
+					}
+				}
+				tree->next();
+			}
+
+			else 
+			{
+				bool end = false;
+
+				tree->up();
+				while (!tree->next())
+				{
+					if (auto value = tree->get().getValue())
+					{
+						if (value->text == "program")
+						{
+							end = true;
+							break;
+						}
+					}
+
+					tree->up();
+				}
+
+				if (end)
+					break;
+			}
+		}
+	}
+
+	closeBlock();
+}
+
+void Shell::dive()
+{
+	tree->down();
+
+	auto& back = m_blocks.back();
+	if (back.repeat)
+		back.depth++;
+}
+
+Shell::ValueInfo& Shell::search(string const& id)
+{
+	for (auto& block : m_blocks)
+	{
+		auto& ids = block.ids;
+
+		auto entry = find(ids.cbegin(), ids.cend(), id);
+		if (entry != ids.cend())
+			return block.infos[distance(ids.cbegin(), entry)];
+	}
+
+	throw runtime_error("");
+}
+
+//void Shell::prepare(string const& id)
+//{
+//	auto& back   = m_blocks.back();
+//	auto& ids   = back.ids;
+//	auto& infos = back.infos;
+//
+//	auto entry = find(ids.cbegin(), ids.cend(), id);
+//	if (entry == ids.end())
+//		throw runtime_error("");
+//
+//	back.target = &infos[distance(ids.cbegin(), entry)];
+//}
+
+void Shell::declaration()
+{
+	tree->down();
+	auto type = toVIType(tree->get().getValue()->text[0]);
+
+	tree->next();
+	auto& id = tree->get().getValue()->text;
+
+	auto& info_id = declare(id, type);
+
+	if (tree->next()) // =
+	{
+		tree->next();
+
+		auto& token = tree->get();
+
+		m_blocks.back().target = &info_id;
+		expression();
+	}
+
+	tree->up();
+}
+
+void Shell::expression()
+{
+	dive();
+
+	auto& back = openBlock();
+
+	// Reverse Polish Notation
+	Expression rpn;
+
+	do
+	{
+		auto& token = tree->get();
+
+		if (auto type = token.getType())
+		{
+			if (*type == Token::Type::Expression)
+			{
+				back.target = &declare();
+
+				expression();
+			}
+		}
+
+		else
+			rpn.push_back(token.getValue());
+
+	} while (tree->next());
+
+	auto decl = [this](Token::Value const& value)
+	{
+		// Создание копии существующей переменной
+		if (value.type == Token::Value::Type::Id)
+		{
+			auto& vi = search(value.text);
+			declare(vi.type, vi.value);
+		}
+
+		// Создание переменной из литерала
+		else
+			declare(toVIType(value.type), value.text);
+	};
+
+	if (rpn.size() == 1ull)
+		decl(*rpn.front());
+
+	else
+	{
+		rpn = toPostfix(rpn);
+
+		stack<Token::Value const*> vstack;
+		while (!rpn.empty())
+		{
+			auto value = rpn.front();
+			rpn.pop_front();
+
+			if (value->type != Token::Value::Type::Operator)
+				vstack.push(value);
+
+			else
+			{
+				if (back.ids.empty())
+				{
+					auto& lhs = vstack.top(); vstack.pop();
+					decl(*lhs);
+				}
+
+				auto& rhs = vstack.top(); vstack.pop();
+
+				auto& _text = value->text;
+
+				if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
+					logicOp(_text, back.infos.back(), rhs->text);
+
+				else
+					arithmOp(_text[0], back.infos.back(), rhs->text);
+			}
+
+		}
+
+		//auto lim = rpn.size() - 1ull;
+
+		//for (size_t i = lim; i > 0ull; i -= 2ull)
+		//{
+		//	auto& lhs = rpn[i];
+		//	if (lhs->type != Token::Value::Type::Operator)
+		//	{
+		//		decl(*lhs);
+
+		//		auto& rhs = rpn[i - 1ull];
+
+		//		// Searching for operator...
+		//		for (size_t j = i; j < rpn.size(); j++)
+		//		{
+		//			if (rpn[j]->type == Token::Value::Type::Operator)
+		//			{
+		//				auto& _text = rpn[j]->text;
+
+		//				if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
+		//					logicOp(_text, back.infos.back(), rhs->text);
+
+		//				else
+		//					arithmOp(_text[0], back.infos.back(), rhs->text);
+
+		//				break;
+		//			}
+		//		}
+		//	}
+		//}
+	}
+
+	tree->up();
+
+	auto result = closeBlock();
+
+	auto target = m_blocks.back().target;
+	if (target)
+	{
+		if (target->type == result.type)
+			target->value = result.value;
+
+		else if (target->type == VIType::Any)
+		{
+			target->type  = result.type;
+			target->value = result.value;
+		}
+			
+		else
+			throw runtime_error("");
+
+		target = nullptr;
+	}
+}
+
+void Shell::expressionStatement()
+{
+		
+}
+
+void Shell::iterationStatement()
+{
+
+}
+
+void Shell::printStatement()
+{
+	dive();
+	tree->next();
+
+	auto& var = declare();
+	m_blocks.back().target = &var;
+	expression();
+
+	switch (var.type)
+	{
+	case VIType::Bool:
+		cout << get<bool>(var.value);
+	break;
+
+	case VIType::Float:
+		cout << get<float>(var.value);
+	break;
+
+	case VIType::Int:
+		cout << get<int>(var.value);
+	break;
+
+	case VIType::String:
+		cout << get<string>(var.value);
+	break;
+	}
+
+	cout << '\n';
+
+	tree->up();
+}
+
+void Shell::selectionStatement()
+{
+	dive();
+
+	tree->next(); // if
+	tree->next(); // (
+
+	auto& var = declare(VIType::Bool);
+	m_blocks.back().target = &var;
+	expression();
+
+	tree->next(); // )
+
+	// фальш
+	if (get<bool>(var.value) == false)
+	{
+		tree->next(); // {
+
+		while (true)
+		{
+			auto& _token = tree->get();
+			if (auto value = _token.getValue()) // }
+				break;
+							
+			tree->next();
+		}
+
+		if (!tree->next()) // no else
+			tree->up();
+	}
+}
+
+Shell::Block& Shell::openBlock()
+{
+	return m_blocks.emplace_back();
+}
+
+Shell::ValueInfo Shell::closeBlock()
+{
+	auto value = m_blocks.back().infos.back();
+
+	m_blocks.pop_back();
+
+	return value;
+}
+	
+Shell::ValueInfo& Shell::declare(string const& id, VIType type)
+{
+	auto& back   = m_blocks.back();
+	auto& ids   = back.ids;
+	auto& infos = back.infos;
+
+	auto entry = find(ids.cbegin(), ids.cend(), id);
+	if (entry != ids.end())
+		throw runtime_error("");
+
+	ids.emplace_back(id);
+	auto& info = infos.emplace_back();
+	info.type  = type;
+		
+	return info;
+}
+
+// Temporary variable
+Shell::ValueInfo& Shell::declare()
+{
+	auto& back   = m_blocks.back();
+	auto& ids   = back.ids;
+	auto& infos = back.infos;
+
+	ids.emplace_back();
+	auto& info = infos.emplace_back();
+	info.type  = VIType::Any;
+
+	return info;
+}
+
+// Temporary variable
+Shell::ValueInfo& Shell::declare(VIType type, string const& value)
+{
+	auto& back   = m_blocks.back();
+	auto& ids   = back.ids;
+	auto& infos = back.infos;
+
+	ids.emplace_back();
+	auto& info = infos.emplace_back();
+	info.type  = type;
+
+	if (!value.empty())
+		initialize(info, value);
+		
+	return info;
+}
+
+// Temporary variable
+Shell::ValueInfo& Shell::declare(VIType type, Value const& value)
+{
+	auto& back   = m_blocks.back();
+	auto& ids   = back.ids;
+	auto& infos = back.infos;
+
+	ids.emplace_back();
+	auto& info = infos.emplace_back();
+	info.type  = type;
+	info.value = value;
+
+	return info;
+}
+
+void Shell::assign(string const& id, VIType type, string const& value)
+{
+	auto& back   = m_blocks.back();
+	auto& ids   = back.ids;
+	auto& infos = back.infos;
+
+	auto entry = find(ids.cbegin(), ids.cend(), id);
+	if (entry == ids.end())
+		throw runtime_error("");
+
+	auto& info = infos[distance(ids.cbegin(), entry)];
+
+	if (info.type != type)
+		throw runtime_error("");
+
+	initialize(info, value);
+}
+
+//void Shell::assign(string const& id_lhs, string const& id_rhs)
+//{
+//	auto& back   = m_blocks.back();
+//	auto& ids   = back.ids;
+//	auto& infos = back.infos;
+//
+//	auto entry_lhs = find(ids.cbegin(), ids.cend(), id_lhs);
+//	if (entry_lhs == ids.end())
+//		throw runtime_error("");
+//
+//	auto entry_rhs = find(ids.cbegin(), ids.cend(), id_rhs);
+//	if (entry_rhs == ids.end())
+//		throw runtime_error("");
+//
+//	auto& info_lhs = infos[distance(ids.cbegin(), entry_lhs)];
+//	auto& info_rhs = infos[distance(ids.cbegin(), entry_rhs)];
+//
+//	if (info_lhs.type != info_rhs.type)
+//		throw runtime_error("");
+//
+//	info_lhs.value = info_rhs.value;
+//}
+	
+bool Shell::stob(string const& value) const
+{
+	if (value.front() == 't' || value.front() == '1')
+		return true;
+
+	return false;
+}
+
+Shell::VIType Shell::toVIType(Token::Value::Type type) const
+{
+	switch (type)
+	{
+	case Token::Value::Type::BoolLiteral:
+		return VIType::Bool;
+
+	case Token::Value::Type::FloatLiteral:
+		return VIType::Float;
+
+	case Token::Value::Type::IntLiteral:
+		return VIType::Int;
+
+	case Token::Value::Type::StringLiteral:
+		return VIType::String;
+
+	default:
+		throw runtime_error("");
+	}
+}
+
+Shell::VIType Shell::toVIType(char type) const
+{
+	switch (type)
+	{
+	case 'b':
+		return VIType::Bool;
+
+	case 'f':
+		return VIType::Float;
+
+	case 'i':
+		return VIType::Int;
+
+	case 's':
+		return VIType::String;
+
+	default:
+		throw runtime_error("");
+	}
+}
+
+bool Shell::isInitialized(Value const& value) const
+{
+	return value.index() != variant_npos;
+}
+
+void Shell::initialize(ValueInfo& info, string const& value)
+{
+	switch (info.type)
+	{
+	case VIType::Bool:
+		info.value.emplace<bool>(stob(value));
+	break;
+
+	case VIType::Float:
+		info.value.emplace<float>(stof(value));
+	break;
+
+	case VIType::Int:
+		info.value.emplace<int>(stoi(value));
+	break;
+
+	case VIType::String:
+		info.value.emplace<string>(value);
+	break;
+
+	default:
+		break;
+	}
+}
+
+void Shell::arithmOp(char op, ValueInfo& info, string const& value)
+{
+	switch (op)
+	{
+	case '^':
+	{
+		switch (info.type)
+		{
+		case VIType::Float:
+		{
+			auto& _value = get<float>(info.value);
+			_value = pow(_value, stof(value));
+		}
+		break;
+
+		case VIType::Int:
+		{
+			auto& _value = get<int>(info.value);
+			_value = (int)pow(_value, stoi(value));
+		}
+		break;
+
+		case VIType::String:
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '*':
+	{
+		switch (info.type)
+		{
+		case VIType::Float:
+			get<float>(info.value) *= stof(value);
+		break;
+
+		case VIType::Int:
+			get<int>(info.value) *= stoi(value);
+		break;
+
+		case VIType::String:
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '/':
+	{
+		switch (info.type)
+		{
+		case VIType::Float:
+			get<float>(info.value) /= stof(value);
+		break;
+
+		case VIType::Int:
+			get<int>(info.value) /= stoi(value);
+		break;
+
+		case VIType::String:
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '%':
+	{
+		switch (info.type)
+		{
+		case VIType::Float:
+		break;
+
+		case VIType::Int:
+			get<int>(info.value) %= stoi(value);
+		break;
+
+		case VIType::String:
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '+':
+	{
+		switch (info.type)
+		{
+		case VIType::Float:
+			get<float>(info.value) += stof(value);
+		break;
+
+		case VIType::Int:
+			get<int>(info.value) += stoi(value);
+		break;
+
+		case VIType::String:
+			get<string>(info.value) += value;
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '-':
+	{
+		switch (info.type)
+		{
+		case VIType::Float:
+			get<float>(info.value) -= stof(value);
+		break;
+
+		case VIType::Int:
+			get<int>(info.value) -= stoi(value);
+		break;
+
+		case VIType::String:
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
+	}
+}
+
+void Shell::logicOp(string const& op, ValueInfo const& info, string const& value)
+{
+//	declUninit(VIType::Bool);
+	auto& temp_value = get<bool>(m_blocks.back().infos.back().value);
+
+	auto len = op.size();
+
+	switch (op[0])
+	{
+	case '<':
+	{
+		if (len > 1ull)
+			switch (info.type)
+			{
+			case VIType::Float:
+				temp_value = get<float>(info.value) <= stof(value);
+			break;
+
+			case VIType::Int:
+				temp_value = get<int>(info.value) <= stoi(value);
+			break;
+
+			case VIType::String:
+			break;
+					
+			default:
+				break;
+			}
+
+		else
+			switch (info.type)
+			{
+			case VIType::Float:
+				temp_value = get<float>(info.value) < stof(value);
+			break;
+
+			case VIType::Int:
+				temp_value = get<int>(info.value) < stoi(value);
+			break;
+
+			case VIType::String:
+			break;
+					
+			default:
+				break;
+			}
+	}
+	break;
+
+	case '>':
+	{
+		if (len > 1ull)
+			switch (info.type)
+			{
+			case VIType::Float:
+				temp_value = get<float>(info.value) >= stof(value);
+			break;
+
+			case VIType::Int:
+				temp_value = get<int>(info.value) >= stoi(value);
+			break;
+
+			case VIType::String:
+			break;
+					
+			default:
+				break;
+			}
+
+		else
+			switch (info.type)
+			{
+			case VIType::Float:
+				temp_value = get<float>(info.value) > stof(value);
+			break;
+
+			case VIType::Int:
+				temp_value = get<int>(info.value) > stoi(value);
+			break;
+
+			case VIType::String:
+			break;
+					
+			default:
+				break;
+			}
+	}
+	break;
+
+	case '=':
+	{
+		switch (info.type)
+		{
+		case VIType::Bool:
+			temp_value = get<bool>(info.value) == stob(value);
+		break;
+
+		case VIType::Float:
+			temp_value = get<float>(info.value) == stof(value);
+		break;
+
+		case VIType::Int:
+			temp_value = get<int>(info.value) == stoi(value);
+		break;
+
+		case VIType::String:
+			temp_value = get<string>(info.value) == value;
+		break;
+					
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '!':
+	{
+		switch (info.type)
+		{
+		case VIType::Bool:
+			temp_value = get<bool>(info.value) != stob(value);
+		break;
+
+		case VIType::Float:
+			temp_value = get<float>(info.value) != stof(value);
+		break;
+
+		case VIType::Int:
+			temp_value = get<int>(info.value) != stoi(value);
+		break;
+
+		case VIType::String:
+			temp_value = get<string>(info.value) != value;
+		break;
+					
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '&':
+	{
+		switch (info.type)
+		{
+		case VIType::Bool:
+			temp_value = get<bool>(info.value) && stob(value);
+		break;
+					
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '|':
+	{
+		switch (info.type)
+		{
+		case VIType::Bool:
+			temp_value = get<bool>(info.value) || stob(value);
+		break;
+					
+		default:
+			break;
+		}
+	}
+	break;
+	}
+}
+
+Shell::Expression Shell::toPostfix(Expression const& infix) const
+{
+	// Функция определения приоритета операторов
+	auto precedence = [](char op)
+	{
+		if (op == '|')
+			return 1;
+
+		if (op == '&')
+			return 2;
+
+		if (op == '=' || op == '!')
+			return 3;
+
+		if (op == '<' || op == '>')
+			return 4;
+
+		if (op == '+' || op == '-')
+			return 5;
+
+		if (op == '*' || op == '/' || op == '%')
+			return 6;
+
+		if (op == '^')
+			return 7;
+
+		return 0;
+	};
+
+	stack<Token::Value const*>  operators;
+	list<Token::Value const*> output;
+
+	for (auto token : infix)
+	{
+		auto& text = token->text;
+		auto  pres = precedence(text[0]);
+
+		if (token->type != Token::Value::Type::Operator)
+			output.push_back(token);
+
+		else if (text[0] == '(')
+			operators.push(token);
+
+		else if (text[0] == ')')
+		{
+			while (!operators.empty() && operators.top()->text[0] != '(')
+			{
+				output.push_back(operators.top());
+				operators.pop();
+			}
+
+			if (!operators.empty())
+				operators.pop(); // Убрать '(' из стека
+		} 
+		// Если токен - оператор
+		else if (pres > 0)
+		{
+			while (!operators.empty() && precedence(operators.top()->text[0]) >= pres)
+			{
+				output.push_back(operators.top());
+
+				operators.pop();
+			}
+
+			operators.push(token);
+		}
+	}
+
+    // Удаление оставшихся операторов из стека
+	while (!operators.empty())
+	{
+		output.push_back(operators.top());
+
+        operators.pop();
+	}
+
+	return output;
+}

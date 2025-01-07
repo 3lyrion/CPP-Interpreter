@@ -210,6 +210,15 @@ public:
 		{
 			m_node = m_node->back;
 
+			if (m_node->back)
+			{
+				auto& childs = m_node->back->childs;
+				m_index = distance(childs.cbegin(), find(childs.cbegin(), childs.cend(), m_node));
+			}
+
+			else
+				m_index = 0ull;
+
 			return true;
 		}
 
@@ -221,7 +230,9 @@ public:
 		auto& childs = m_node->childs;
 		if (!childs.empty())
 		{
-			m_node = childs.front();
+			m_node  = childs.front();
+			m_index = 0ull;
+
 			return true;
 		}
 

@@ -28,7 +28,7 @@ private:
 	{
 		"const", "program", "block", "statement", "typeSpec",
 		"logic1", "logic2", "logic3", "term", "factor", "power", "operand",
-		"literal", "id"/*, "iterStmt", "selStmt", "printStmt", "exprStmt"*/
+		"literal", "id", ";"/*, "iterStmt", "selStmt", "printStmt", "exprStmt"*/
 	};
 
 private:

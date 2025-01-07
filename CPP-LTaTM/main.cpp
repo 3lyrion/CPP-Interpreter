@@ -42,7 +42,8 @@ int main()
     
     Lexer lexer("input.txt");
     Parser parser(lexer);
-    parser.parse();
+    Shell shell;
+    shell.interpet(*parser.parse().release());
     
  //   list<int> l1 { 1, 2, 5 };
  //   list<int> l2 { 2, 3, 4 };
