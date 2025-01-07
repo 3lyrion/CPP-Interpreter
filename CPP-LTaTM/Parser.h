@@ -6,14 +6,14 @@
 class Parser
 {
 public:
-	Parser(Lexer& theLexer);
-
-	Tree<Shell::Token> const& parse();
-
-private:
 	using TTree    = Tree<Shell::Token>;
 	using TTreePtr = uptr<TTree>;
 
+	Parser(Lexer& theLexer);
+
+	TTreePtr parse();
+
+private:
 	Lexer& lexer;
 
 	vector<Lexer::Token> const* tokens = nullptr;
@@ -28,7 +28,7 @@ private:
 	{
 		"const", "program", "block", "statement", "typeSpec",
 		"logic1", "logic2", "logic3", "term", "factor", "power", "operand",
-		"literal"/*, "iterStmt", "selStmt", "printStmt", "exprStmt"*/
+		"literal", "id"/*, "iterStmt", "selStmt", "printStmt", "exprStmt"*/
 	};
 
 private:

@@ -15,13 +15,12 @@ class Tree
 
 		T value = T(0);
 
-		Node(T const& value_, Node* back_ = nullptr) :
+		explicit Node(T const& value_, Node* back_ = nullptr) :
 			value (value_),
 			back  (back_) { }
 
-		constexpr Node(auto&&... args, Node* back_ = nullptr) :
-			value (forward<decltype(args)>(args)...),
-			back  (back_) { }
+		constexpr explicit Node(auto&&... args) :
+			value (forward<decltype(args)>(args)...) { }
 	};
 
 public:
