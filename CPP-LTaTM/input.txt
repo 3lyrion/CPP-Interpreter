@@ -1,11 +1,15 @@
 bool finish = false;
-float sum = 5.0 + 7.0 * 10.0 + 7.0 * 10.0;
+float sum = 5.0 + 7.0 * (10.0 + 7.0) * 10.0;
 const float FACTOR = 2.0;
 string str = "Abcdef";
 
+if (finish)
 {
 print "Result";
 print sum;
 print FACTOR;
 print str;
 }
+
+else { print "Tatushka"; }
+;

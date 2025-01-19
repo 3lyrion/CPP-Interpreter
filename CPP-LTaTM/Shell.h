@@ -148,8 +148,8 @@ private:
 
 	struct Block
 	{
-		vector<string>    ids;
-		vector<ValueInfo> infos;
+		list<string>    ids;
+		list<ValueInfo> infos;
 
 		bool   repeat = false;
 		size_t depth  = 0;
@@ -219,6 +219,8 @@ private:
 	//void logicOp(string const& op, VIType type, string const& lvalue, string const& rvalue);
 
 	ValuePtr toValue(Token::Value const& tokenValue) const;
+
+
 
 	using Expression = list<Token::Value const*>;
 	Expression toPostfix(Expression const& infix) const;

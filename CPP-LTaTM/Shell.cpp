@@ -1,11 +1,13 @@
 #include "Shell.h"
 
+using TkValueType = Shell::Token::Value::Type;
+
 void Shell::interpet(Tree<Token>& theTree)
 {
 	tree = &theTree;
 
-	//tree->print();
-	//return;
+//	tree->print();
+//    return;
 
 	openBlock();
 
@@ -15,8 +17,6 @@ void Shell::interpet(Tree<Token>& theTree)
 	while (true)
 	{
 		auto& token = tree->get();
-
-//		cout << token << '\n';
 
 		if (auto type = token.getType())
 		{
@@ -136,7 +136,13 @@ Shell::ValueInfo& Shell::search(string const& id)
 
 		auto entry = find(ids.cbegin(), ids.cend(), id);
 		if (entry != ids.cend())
-			return block.infos[distance(ids.cbegin(), entry)];
+	//		return block.infos[distance(ids.cbegin(), entry)];
+		{
+			auto it = block.infos.begin();
+			advance(it, distance(ids.cbegin(), entry));
+
+			return *it;
+		}
 	}
 
 	throw runtime_error("");
@@ -179,30 +185,46 @@ void Shell::expression(ValueInfo& target)
 {
 	dive();
 
-	auto& back = openBlock();
+	auto& back  = openBlock();
+	auto& infos = back.infos;
 
 	// Reverse Polish Notation
 	Expression rpn;
 
-	do
-	{
-		auto& token = tree->get();
+	auto depth = 0u;
 
-		if (auto type = token.getType())
+	while (true)
+	{
+		if (auto type = tree->get().getType())
 		{
 			if (*type == Token::Type::Expression)
-				expression(declare());
+			{
+				tree->down();
+				depth++;
+			}
 		}
 
-		else
-			rpn.push_back(token.getValue());
+		rpn.push_back(tree->get().getValue());
 
-	} while (tree->next());
+		if (!tree->next())
+		{
+			if (depth > 0u)
+			{
+				tree->up();
+				tree->next();
+				depth--;
+			}
+
+			else
+				break;
+		}
+
+	}
 
 	auto decl = [this](Token::Value const& value) -> auto&
 	{
 		// —оздание копии существующей переменной
-		if (value.type == Token::Value::Type::Id)
+		if (value.type == TkValueType::Id)
 		{
 			auto& vi = search(value.text);
 			return declare(vi.type, vi.value);
@@ -217,7 +239,7 @@ void Shell::expression(ValueInfo& target)
 	{
 		auto& value = *rpn.front();
 
-		if (value.type == Token::Value::Type::Id)
+		if (value.type == TkValueType::Id)
 			target = search(value.text);
 
 		else
@@ -226,129 +248,38 @@ void Shell::expression(ValueInfo& target)
 			initialize(target, value.text);
 		}
 	}
-		//decl(*rpn.front());
 
 	else
 	{
 		rpn = toPostfix(rpn);
 
-		stack<ValuePtr> vstack;
 		while (!rpn.empty())
 		{
 			auto value = rpn.front();
 			rpn.pop_front();
 
-			if (value->type != Token::Value::Type::Operator)
-				vstack.emplace(move(toValue(*value)));
+			if (value->type != TkValueType::Operator)
+				decl(*value);
 
 			else
 			{
-				auto pop2 = [&vstack]
-				{
-					vstack.pop(); vstack.pop();
-				};
+				auto lhs = move(infos.back()); infos.pop_back();
+				auto rhs = move(infos.back()); infos.pop_back();
 
-				auto& lhs = vstack.top();
-				auto& rhs = vstack.top();
+				auto& var = declare(lhs.type);
 
-				if (rhs->type == Token::Value::Type::Id)
-				{
-					auto& _text = value->text;
+				auto& _text = value->text;
 
-					auto& rv = search(rhs->text).value;
-
-					pop2();
-
-					if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
-						logicOp(_text, target, back.infos.back(), rv);
-
-					else
-						arithmOp(_text[0], target, back.infos.back(), rv);
-				}
+				if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
+					logicOp(_text, var, lhs, rhs.value);
 
 				else
-				{
-					auto& _text = value->text;
-
-					if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
-						logicOp(_text, target, back.infos.back(), rhs->text);
-
-					else
-						arithmOp(_text[0], target, back.infos.back(), rhs->text);
-				}
-
-			/*auto value = rpn.front();
-			rpn.pop_front();
-
-			if (value->type != Token::Value::Type::Operator)
-				vstack.push(value);
-
-			else
-			{
-				if (back.ids.empty())
-				{
-					decl(*vstack.top());
-					vstack.pop();
-				}
-
-				auto rhs = vstack.top(); vstack.pop();
-
-				if (rhs->type == Token::Value::Type::Id)
-				{
-					auto& _text = value->text;
-
-					auto& rv = search(rhs->text).value;
-
-					if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
-						logicOp(_text, target, back.infos.back(), rv);
-
-					else
-						arithmOp(_text[0], target, back.infos.back(), rv);
-				}
-
-				else
-				{
-					auto& _text = value->text;
-
-					if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
-						logicOp(_text, target, back.infos.back(), rhs->text);
-
-					else
-						arithmOp(_text[0], target, back.infos.back(), rhs->text);
-				}*/
+					arithmOp(_text[0], var, lhs, rhs.value);
 			}
 
 		}
 
-		//auto lim = rpn.size() - 1ull;
-
-		//for (size_t i = lim; i > 0ull; i -= 2ull)
-		//{
-		//	auto& lhs = rpn[i];
-		//	if (lhs->type != Token::Value::Type::Operator)
-		//	{
-		//		decl(*lhs);
-
-		//		auto& rhs = rpn[i - 1ull];
-
-		//		// Searching for operator...
-		//		for (size_t j = i; j < rpn.size(); j++)
-		//		{
-		//			if (rpn[j]->type == Token::Value::Type::Operator)
-		//			{
-		//				auto& _text = rpn[j]->text;
-
-		//				if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
-		//					logicOp(_text, back.infos.back(), rhs->text);
-
-		//				else
-		//					arithmOp(_text[0], back.infos.back(), rhs->text);
-
-		//				break;
-		//			}
-		//		}
-		//	}
-		//}
+		target = back.infos.back();
 	}
 
 	tree->up();
@@ -427,6 +358,7 @@ void Shell::selectionStatement()
 	auto& var = declare();
 	expression(var);
 
+	tree->next(); // Expression
 	tree->next(); // )
 
 	// фальш
@@ -503,6 +435,9 @@ Shell::ValueInfo& Shell::declare(VIType type, string const& value)
 
 	if (!value.empty())
 		initialize(info, value);
+
+	else
+		initialize(info);
 		
 	return info;
 }
@@ -524,7 +459,7 @@ Shell::ValueInfo& Shell::declare(VIType type, Value const& value)
 
 void Shell::assign(string const& id, VIType type, string const& value)
 {
-	auto& back   = m_blocks.back();
+	auto& back  = m_blocks.back();
 	auto& ids   = back.ids;
 	auto& infos = back.infos;
 
@@ -532,7 +467,11 @@ void Shell::assign(string const& id, VIType type, string const& value)
 	if (entry == ids.end())
 		throw runtime_error("");
 
-	auto& info = infos[distance(ids.cbegin(), entry)];
+	auto it = infos.begin();
+	advance(it, distance(ids.cbegin(), entry));
+	auto& info = *it;
+
+//	auto& info = infos[distance(ids.cbegin(), entry)];
 
 	if (info.type != type)
 		throw runtime_error("");
@@ -571,20 +510,20 @@ bool Shell::stob(string const& value) const
 	return false;
 }
 
-Shell::VIType Shell::toVIType(Token::Value::Type type) const
+Shell::VIType Shell::toVIType(TkValueType type) const
 {
 	switch (type)
 	{
-	case Token::Value::Type::BoolLiteral:
+	case TkValueType::BoolLiteral:
 		return VIType::Bool;
 
-	case Token::Value::Type::FloatLiteral:
+	case TkValueType::FloatLiteral:
 		return VIType::Float;
 
-	case Token::Value::Type::IntLiteral:
+	case TkValueType::IntLiteral:
 		return VIType::Int;
 
-	case Token::Value::Type::StringLiteral:
+	case TkValueType::StringLiteral:
 		return VIType::String;
 
 	default:
@@ -809,15 +748,15 @@ void Shell::arithmOp(char op, ValueInfo& target, ValueInfo& linfo, Value const& 
 	}
 }
 
-Shell::ValuePtr Shell::arithmOp(char op, VIType type, Value const& lvalue, Value const& rvalue)
-{
-
-}
-
-Shell::ValuePtr Shell::arithmOp(char op, VIType type, string const& lvalue, string const& rvalue)
-{
-
-}
+//Shell::ValuePtr Shell::arithmOp(char op, VIType type, Value const& lvalue, Value const& rvalue)
+//{
+//
+//}
+//
+//Shell::ValuePtr Shell::arithmOp(char op, VIType type, string const& lvalue, string const& rvalue)
+//{
+//
+//}
 
 void Shell::arithmOp(char op, ValueInfo& target, ValueInfo& linfo, string const& rvalue)
 {
@@ -1268,7 +1207,7 @@ Shell::Expression Shell::toPostfix(Expression const& infix) const
 		auto& text = token->text;
 		auto  pres = precedence(text[0]);
 
-		if (token->type != Token::Value::Type::Operator)
+		if (token->type != TkValueType::Operator)
 			output.push_back(token);
 
 		else if (text[0] == '(')

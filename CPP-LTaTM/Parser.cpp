@@ -54,12 +54,12 @@ void Parser::seek()
 	raise();
 }
 
-Lexer::Token const& Parser::peek()
+Lexer::Token const* Parser::peek()
 {
 	if (m_index > tokens->size() - 1)
-		throw "";
+		return nullptr;
 
-	return (*tokens)[m_index];
+	return &(*tokens)[m_index];
 }
 
 void Parser::eat(LType type)
@@ -123,13 +123,16 @@ Parser::TTreePtr Parser::declaration()
 			tree->push_back(move(_tree));
 		}
 
-		auto& v = peek().value;
-		if (v == "=")
+		if (auto t = peek())
 		{
-			raise();
+			auto& v = t->value;
+			if (v == "=")
+			{
+				raise();
 
-			tree->emplace_back(v);
-			tree->push_back(move(*expression().release()));
+				tree->emplace_back(v);
+				tree->push_back(move(*expression().release()));
+			}
 		}
 
 		eat(LType::Separator);
@@ -204,14 +207,17 @@ Parser::TTreePtr Parser::expression()
 begin:
 	tree->push_back(move(*logic1().release()));
 
-	auto& v = peek().value;
-	if (v == "||")
+	if (auto t = peek())
 	{
-		raise();
+		auto& v = t->value;
+		if (v == "||")
+		{
+			raise();
 
-		tree->emplace_back(v, VType::Operator);
+			tree->emplace_back(v, VType::Operator);
 
-		goto begin;
+			goto begin;
+		}
 	}
 
 	return tree;
@@ -224,14 +230,16 @@ Parser::TTreePtr Parser::logic1()
 begin:
 	tree->push_back(move(*logic2().release()));
 
-	auto& v = peek().value;
-	if (v == "&&")
+	if (auto t = peek())
 	{
-		raise();
+		if (t->value == "&&")
+		{
+			raise();
 
-		tree->emplace_back(v, VType::Operator);
+			tree->emplace_back(t->value, VType::Operator);
 
-		goto begin;
+			goto begin;
+		}
 	}
 
 	return tree;
@@ -244,14 +252,17 @@ Parser::TTreePtr Parser::logic2()
 begin:
 	tree->push_back(move(*logic3().release()));
 
-	auto& v = peek().value;
-	if (v == "==" || v == "!=")
+	if (auto t = peek())
 	{
-		raise();
+		auto& v = t->value;
+		if (v == "==" || v == "!=")
+		{
+			raise();
 
-		tree->emplace_back(v, VType::Operator);
+			tree->emplace_back(v, VType::Operator);
 
-		goto begin;
+			goto begin;
+		}
 	}
 
 	return tree;
@@ -264,14 +275,17 @@ Parser::TTreePtr Parser::logic3()
 begin:
 	tree->push_back(move(*term().release()));
 
-	auto& v = peek().value;
-	if (v == "<" || v == ">" || v == "<=" || v == ">=")
+	if (auto t = peek())
 	{
-		raise();
+		auto& v = t->value;
+		if (v == "<" || v == ">" || v == "<=" || v == ">=")
+		{
+			raise();
 
-		tree->emplace_back(v, VType::Operator);
+			tree->emplace_back(v, VType::Operator);
 
-		goto begin;
+			goto begin;
+		}
 	}
 
 	return tree;
@@ -284,14 +298,17 @@ Parser::TTreePtr Parser::term()
 begin:
 	tree->push_back(move(*factor().release()));
 
-	auto& v = peek().value;
-	if (v == "+" || v == "-")
+	if (auto t = peek())
 	{
-		raise();
+		auto& v = t->value;
+		if (v == "+" || v == "-")
+		{
+			raise();
 
-		tree->emplace_back(v, VType::Operator);
+			tree->emplace_back(v, VType::Operator);
 
-		goto begin;
+			goto begin;
+		}
 	}
 
 	return tree;
@@ -304,14 +321,17 @@ Parser::TTreePtr Parser::factor()
 begin:
 	tree->push_back(move(*power().release()));
 
-	auto& v = peek().value;
-	if (v == "*" || v == "/" || v == "%")
+	if (auto t = peek())
 	{
-		raise();
+		auto& v = t->value;
+		if (v == "*" || v == "/" || v == "%")
+		{
+			raise();
 
-		tree->emplace_back(v, VType::Operator);
+			tree->emplace_back(v, VType::Operator);
 
-		goto begin;
+			goto begin;
+		}
 	}
 
 	return tree;
@@ -324,14 +344,17 @@ Parser::TTreePtr Parser::power()
 begin:
 	tree->push_back(move(*operand().release()));
 
-	auto& v = peek().value;
-	if (v == "^")
+	if (auto t = peek())
 	{
-		raise();
+		auto& v = t->value;
+		if (v == "^")
+		{
+			raise();
 
-		tree->emplace_back(v, VType::Operator);
+			tree->emplace_back(v, VType::Operator);
 
-		goto begin;
+			goto begin;
+		}
 	}
 
 	return tree;
@@ -341,51 +364,55 @@ Parser::TTreePtr Parser::operand()
 {
 	auto tree = make_unique<TTree>(__func__);
 
-	auto& v = peek().value;
-	if (v == "-" || v == "!")
+	if (auto t = peek())
 	{
-		raise();
+		auto& v = t->value;
+		if (v == "-" || v == "!")
+		{
+			raise();
 
-		tree->emplace_back(v);
+			tree->emplace_back(v);
+		}
 	}
 
-	auto& tk = peek();
-
-	if (tk.value == "(")
+	if (auto t = peek())
 	{
-		raise();
-
-		tree->emplace_back(tk.value);
-
-		tree->push_back(move(*expression().release()));
-
-		eat(LType::Operator);
-		if (token->value == ")")
+		if (t->value == "(")
 		{
-			tree->emplace_back(token->value);
+			raise();
+
+			tree->emplace_back(t->value, VType::Operator);
+
+			tree->push_back(move(*expression().release()));
+
+			eat(LType::Operator);
+			if (token->value == ")")
+			{
+				tree->emplace_back(token->value, VType::Operator);
+
+				return tree;
+			}
+		}
+
+		else if (t->type == LType::Id)
+		{
+			raise();
+
+			{
+				TTree _tree("id");
+				_tree.emplace_back(t->value, VType::Id);
+				tree->push_back(move(_tree));
+			}
 
 			return tree;
 		}
-	}
 
-	else if (tk.type == LType::Id)
-	{
-		raise();
-
+		else
 		{
-			TTree _tree("id");
-			_tree.emplace_back(tk.value, VType::Id);
-			tree->push_back(move(_tree));
+			tree->push_back(move(*literal().release()));
+
+			return tree;
 		}
-
-		return tree;
-	}
-
-	else
-	{
-		tree->push_back(move(*literal().release()));
-
-		return tree;
 	}
 
 	throw runtime_error("");
@@ -484,14 +511,17 @@ Parser::TTreePtr Parser::selStmt()
 
 				tree->push_back(move(*block().release()));
 
-				auto& v = peek().value;
-				if (v == "else")
+				if (auto t = peek())
 				{
-					raise();
+					auto& v = t->value;
+					if (v == "else")
+					{
+						raise();
 
-					tree->emplace_back(v);
+						tree->emplace_back(v);
 
-					tree->push_back(move(*block().release()));
+						tree->push_back(move(*block().release()));
+					}
 				}
 
 				return tree;

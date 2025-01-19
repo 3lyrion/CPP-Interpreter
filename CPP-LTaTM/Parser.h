@@ -34,7 +34,7 @@ private:
 private:
 	void seek();
 
-	Lexer::Token const& peek();
+	Lexer::Token const* peek();
 
 	void eat(Lexer::Token::Type type);
 
