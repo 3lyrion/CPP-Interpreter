@@ -4,6 +4,9 @@ void Shell::interpet(Tree<Token>& theTree)
 {
 	tree = &theTree;
 
+	//tree->print();
+	//return;
+
 	openBlock();
 
 	tree->begin();
@@ -23,9 +26,9 @@ void Shell::interpet(Tree<Token>& theTree)
 				declaration();
 			break;
 
-			case Token::Type::Expression:
-				expression();
-			break;
+			//case Token::Type::Expression:
+			//	expression();
+			//break;
 
 			case Token::Type::ExpressionStatement:
 				expressionStatement();
@@ -149,7 +152,7 @@ Shell::ValueInfo& Shell::search(string const& id)
 //	if (entry == ids.end())
 //		throw runtime_error("");
 //
-//	back.target = &infos[distance(ids.cbegin(), entry)];
+//	back.target.value = &infos[distance(ids.cbegin(), entry)];
 //}
 
 void Shell::declaration()
@@ -166,16 +169,13 @@ void Shell::declaration()
 	{
 		tree->next();
 
-		auto& token = tree->get();
-
-		m_blocks.back().target = &info_id;
-		expression();
+		expression(info_id);
 	}
 
 	tree->up();
 }
 
-void Shell::expression()
+void Shell::expression(ValueInfo& target)
 {
 	dive();
 
@@ -191,11 +191,7 @@ void Shell::expression()
 		if (auto type = token.getType())
 		{
 			if (*type == Token::Type::Expression)
-			{
-				back.target = &declare();
-
-				expression();
-			}
+				expression(declare());
 		}
 
 		else
@@ -203,31 +199,85 @@ void Shell::expression()
 
 	} while (tree->next());
 
-	auto decl = [this](Token::Value const& value)
+	auto decl = [this](Token::Value const& value) -> auto&
 	{
 		// Создание копии существующей переменной
 		if (value.type == Token::Value::Type::Id)
 		{
 			auto& vi = search(value.text);
-			declare(vi.type, vi.value);
+			return declare(vi.type, vi.value);
 		}
 
 		// Создание переменной из литерала
 		else
-			declare(toVIType(value.type), value.text);
+			return declare(toVIType(value.type), value.text);
 	};
 
 	if (rpn.size() == 1ull)
-		decl(*rpn.front());
+	{
+		auto& value = *rpn.front();
+
+		if (value.type == Token::Value::Type::Id)
+			target = search(value.text);
+
+		else
+		{
+			target.type = toVIType(value.type);
+			initialize(target, value.text);
+		}
+	}
+		//decl(*rpn.front());
 
 	else
 	{
 		rpn = toPostfix(rpn);
 
-		stack<Token::Value const*> vstack;
+		stack<ValuePtr> vstack;
 		while (!rpn.empty())
 		{
 			auto value = rpn.front();
+			rpn.pop_front();
+
+			if (value->type != Token::Value::Type::Operator)
+				vstack.emplace(move(toValue(*value)));
+
+			else
+			{
+				auto pop2 = [&vstack]
+				{
+					vstack.pop(); vstack.pop();
+				};
+
+				auto& lhs = vstack.top();
+				auto& rhs = vstack.top();
+
+				if (rhs->type == Token::Value::Type::Id)
+				{
+					auto& _text = value->text;
+
+					auto& rv = search(rhs->text).value;
+
+					pop2();
+
+					if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
+						logicOp(_text, target, back.infos.back(), rv);
+
+					else
+						arithmOp(_text[0], target, back.infos.back(), rv);
+				}
+
+				else
+				{
+					auto& _text = value->text;
+
+					if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
+						logicOp(_text, target, back.infos.back(), rhs->text);
+
+					else
+						arithmOp(_text[0], target, back.infos.back(), rhs->text);
+				}
+
+			/*auto value = rpn.front();
 			rpn.pop_front();
 
 			if (value->type != Token::Value::Type::Operator)
@@ -237,19 +287,35 @@ void Shell::expression()
 			{
 				if (back.ids.empty())
 				{
-					auto& lhs = vstack.top(); vstack.pop();
-					decl(*lhs);
+					decl(*vstack.top());
+					vstack.pop();
 				}
 
-				auto& rhs = vstack.top(); vstack.pop();
+				auto rhs = vstack.top(); vstack.pop();
 
-				auto& _text = value->text;
+				if (rhs->type == Token::Value::Type::Id)
+				{
+					auto& _text = value->text;
 
-				if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
-					logicOp(_text, back.infos.back(), rhs->text);
+					auto& rv = search(rhs->text).value;
+
+					if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
+						logicOp(_text, target, back.infos.back(), rv);
+
+					else
+						arithmOp(_text[0], target, back.infos.back(), rv);
+				}
 
 				else
-					arithmOp(_text[0], back.infos.back(), rhs->text);
+				{
+					auto& _text = value->text;
+
+					if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
+						logicOp(_text, target, back.infos.back(), rhs->text);
+
+					else
+						arithmOp(_text[0], target, back.infos.back(), rhs->text);
+				}*/
 			}
 
 		}
@@ -286,26 +352,27 @@ void Shell::expression()
 	}
 
 	tree->up();
+	closeBlock();
 
-	auto result = closeBlock();
+//	auto result = closeBlock();
 
-	auto target = m_blocks.back().target;
-	if (target)
-	{
-		if (target->type == result.type)
-			target->value = result.value;
+	//auto target.value = m_blocks.back().target;
+	//if (target)
+	//{
+	//	if (target->type == result.type)
+	//		target->value = result.value;
 
-		else if (target->type == VIType::Any)
-		{
-			target->type  = result.type;
-			target->value = result.value;
-		}
-			
-		else
-			throw runtime_error("");
+	//	else if (target->type == VIType::Any)
+	//	{
+	//		target->type  = result.type;
+	//		target->value = result.value;
+	//	}
+	//		
+	//	else
+	//		throw runtime_error("");
 
-		target = nullptr;
-	}
+	//	target.value = nullptr;
+	//}
 }
 
 void Shell::expressionStatement()
@@ -324,8 +391,7 @@ void Shell::printStatement()
 	tree->next();
 
 	auto& var = declare();
-	m_blocks.back().target = &var;
-	expression();
+	expression(var);
 
 	switch (var.type)
 	{
@@ -358,9 +424,8 @@ void Shell::selectionStatement()
 	tree->next(); // if
 	tree->next(); // (
 
-	auto& var = declare(VIType::Bool);
-	m_blocks.back().target = &var;
-	expression();
+	auto& var = declare();
+	expression(var);
 
 	tree->next(); // )
 
@@ -388,13 +453,9 @@ Shell::Block& Shell::openBlock()
 	return m_blocks.emplace_back();
 }
 
-Shell::ValueInfo Shell::closeBlock()
+void Shell::closeBlock()
 {
-	auto value = m_blocks.back().infos.back();
-
 	m_blocks.pop_back();
-
-	return value;
 }
 	
 Shell::ValueInfo& Shell::declare(string const& id, VIType type)
@@ -410,6 +471,7 @@ Shell::ValueInfo& Shell::declare(string const& id, VIType type)
 	ids.emplace_back(id);
 	auto& info = infos.emplace_back();
 	info.type  = type;
+	initialize(info);
 		
 	return info;
 }
@@ -556,6 +618,31 @@ bool Shell::isInitialized(Value const& value) const
 	return value.index() != variant_npos;
 }
 
+void Shell::initialize(ValueInfo& info)
+{
+	switch (info.type)
+	{
+	case VIType::Bool:
+		info.value.emplace<bool>(false);
+	break;
+
+	case VIType::Float:
+		info.value.emplace<float>(0.0f);
+	break;
+
+	case VIType::Int:
+		info.value.emplace<int>(0);
+	break;
+
+	case VIType::String:
+		info.value.emplace<string>();
+	break;
+
+	default:
+		break;
+	}
+}
+
 void Shell::initialize(ValueInfo& info, string const& value)
 {
 	switch (info.type)
@@ -573,7 +660,7 @@ void Shell::initialize(ValueInfo& info, string const& value)
 	break;
 
 	case VIType::String:
-		info.value.emplace<string>(value);
+		info.value = value;
 	break;
 
 	default:
@@ -581,26 +668,29 @@ void Shell::initialize(ValueInfo& info, string const& value)
 	}
 }
 
-void Shell::arithmOp(char op, ValueInfo& info, string const& value)
+void Shell::arithmOp(char op, ValueInfo& target, ValueInfo& linfo, Value const& rvalue)
 {
+	if (target.type == VIType::Any)
+	{
+		target.type = linfo.type;
+		initialize(target);
+	}
+
+	auto& tvalue = target.value;
+	auto& lvalue = linfo.value;
+
 	switch (op)
 	{
 	case '^':
 	{
-		switch (info.type)
+		switch (linfo.type)
 		{
 		case VIType::Float:
-		{
-			auto& _value = get<float>(info.value);
-			_value = pow(_value, stof(value));
-		}
+			get<float>(tvalue) += pow(get<float>(lvalue), get<float>(rvalue));
 		break;
 
 		case VIType::Int:
-		{
-			auto& _value = get<int>(info.value);
-			_value = (int)pow(_value, stoi(value));
-		}
+			get<int>(tvalue) += (int)pow(get<int>(lvalue), get<int>(rvalue));
 		break;
 
 		case VIType::String:
@@ -614,14 +704,14 @@ void Shell::arithmOp(char op, ValueInfo& info, string const& value)
 
 	case '*':
 	{
-		switch (info.type)
+		switch (linfo.type)
 		{
 		case VIType::Float:
-			get<float>(info.value) *= stof(value);
+			get<float>(tvalue) += get<float>(lvalue) * get<float>(rvalue);
 		break;
 
 		case VIType::Int:
-			get<int>(info.value) *= stoi(value);
+			get<int>(tvalue) += get<int>(lvalue) * get<int>(rvalue);
 		break;
 
 		case VIType::String:
@@ -635,14 +725,14 @@ void Shell::arithmOp(char op, ValueInfo& info, string const& value)
 
 	case '/':
 	{
-		switch (info.type)
+		switch (linfo.type)
 		{
 		case VIType::Float:
-			get<float>(info.value) /= stof(value);
+			get<float>(tvalue) += get<float>(lvalue) / get<float>(rvalue);
 		break;
 
 		case VIType::Int:
-			get<int>(info.value) /= stoi(value);
+			get<int>(tvalue) += get<int>(lvalue) / get<int>(rvalue);
 		break;
 
 		case VIType::String:
@@ -656,13 +746,13 @@ void Shell::arithmOp(char op, ValueInfo& info, string const& value)
 
 	case '%':
 	{
-		switch (info.type)
+		switch (linfo.type)
 		{
 		case VIType::Float:
 		break;
 
 		case VIType::Int:
-			get<int>(info.value) %= stoi(value);
+			get<int>(tvalue) += get<int>(lvalue) % get<int>(rvalue);
 		break;
 
 		case VIType::String:
@@ -676,18 +766,18 @@ void Shell::arithmOp(char op, ValueInfo& info, string const& value)
 
 	case '+':
 	{
-		switch (info.type)
+		switch (linfo.type)
 		{
 		case VIType::Float:
-			get<float>(info.value) += stof(value);
+			get<float>(tvalue) += get<float>(lvalue) + get<float>(rvalue);
 		break;
 
 		case VIType::Int:
-			get<int>(info.value) += stoi(value);
+			get<int>(tvalue) += get<int>(lvalue) + get<int>(rvalue);
 		break;
 
 		case VIType::String:
-			get<string>(info.value) += value;
+			get<string>(tvalue) += get<string>(lvalue) + get<string>(rvalue);
 		break;
 
 		default:
@@ -698,14 +788,14 @@ void Shell::arithmOp(char op, ValueInfo& info, string const& value)
 
 	case '-':
 	{
-		switch (info.type)
+		switch (linfo.type)
 		{
 		case VIType::Float:
-			get<float>(info.value) -= stof(value);
+			get<float>(tvalue) += get<float>(lvalue) - get<float>(rvalue);
 		break;
 
 		case VIType::Int:
-			get<int>(info.value) -= stoi(value);
+			get<int>(tvalue) += get<int>(lvalue) - get<int>(rvalue);
 		break;
 
 		case VIType::String:
@@ -719,10 +809,167 @@ void Shell::arithmOp(char op, ValueInfo& info, string const& value)
 	}
 }
 
-void Shell::logicOp(string const& op, ValueInfo const& info, string const& value)
+Shell::ValuePtr Shell::arithmOp(char op, VIType type, Value const& lvalue, Value const& rvalue)
 {
-//	declUninit(VIType::Bool);
-	auto& temp_value = get<bool>(m_blocks.back().infos.back().value);
+
+}
+
+Shell::ValuePtr Shell::arithmOp(char op, VIType type, string const& lvalue, string const& rvalue)
+{
+
+}
+
+void Shell::arithmOp(char op, ValueInfo& target, ValueInfo& linfo, string const& rvalue)
+{
+	if (target.type == VIType::Any)
+	{
+		target.type = linfo.type;
+		initialize(target);
+	}
+
+	auto& tvalue = target.value;
+	auto& lvalue = linfo.value;
+
+	switch (op)
+	{
+	case '^':
+	{
+		switch (linfo.type)
+		{
+		case VIType::Float:
+			get<float>(tvalue) += pow(get<float>(lvalue), stof(rvalue));
+		break;
+
+		case VIType::Int:
+			get<int>(tvalue) += (int)pow(get<int>(lvalue), stoi(rvalue));
+		break;
+
+		case VIType::String:
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '*':
+	{
+		switch (linfo.type)
+		{
+		case VIType::Float:
+			get<float>(tvalue) += get<float>(lvalue) * stof(rvalue);
+		break;
+
+		case VIType::Int:
+			get<int>(tvalue) += get<int>(lvalue) * stoi(rvalue);
+		break;
+
+		case VIType::String:
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '/':
+	{
+		switch (linfo.type)
+		{
+		case VIType::Float:
+			get<float>(tvalue) += get<float>(lvalue) / stof(rvalue);
+		break;
+
+		case VIType::Int:
+			get<int>(tvalue) += get<int>(lvalue) / stoi(rvalue);
+		break;
+
+		case VIType::String:
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '%':
+	{
+		switch (linfo.type)
+		{
+		case VIType::Float:
+		break;
+
+		case VIType::Int:
+			get<int>(tvalue) += get<int>(lvalue) % stoi(rvalue);
+		break;
+
+		case VIType::String:
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '+':
+	{
+		switch (linfo.type)
+		{
+		case VIType::Float:
+			get<float>(tvalue) += get<float>(lvalue) + stof(rvalue);
+		break;
+
+		case VIType::Int:
+			get<int>(tvalue) += get<int>(lvalue) + stoi(rvalue);
+		break;
+
+		case VIType::String:
+			get<string>(tvalue) += get<string>(lvalue) + rvalue;
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '-':
+	{
+		switch (linfo.type)
+		{
+		case VIType::Float:
+			get<float>(tvalue) += get<float>(lvalue) - stof(rvalue);
+		break;
+
+		case VIType::Int:
+			get<int>(tvalue) += get<int>(lvalue) - stoi(rvalue);
+		break;
+
+		case VIType::String:
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
+	}
+}
+
+void Shell::logicOp(string const& op, ValueInfo& target, ValueInfo& linfo, Value const& rvalue)
+{
+	if (target.type == VIType::Any)
+	{
+		target.type = VIType::Bool;
+		initialize(target);
+	}
+
+	auto& tvalue = target.value;
+	auto& lvalue = linfo.value;
 
 	auto len = op.size();
 
@@ -731,14 +978,77 @@ void Shell::logicOp(string const& op, ValueInfo const& info, string const& value
 	case '<':
 	{
 		if (len > 1ull)
-			switch (info.type)
+			tvalue = lvalue <= rvalue;
+
+		else
+			tvalue = lvalue < rvalue;
+	}
+	break;
+
+	case '>':
+	{
+		if (len > 1ull)
+			tvalue = lvalue >= rvalue;
+
+		else
+			tvalue = lvalue > rvalue;
+	}
+	break;
+
+	case '=':
+	{
+		tvalue = lvalue == rvalue;
+	}
+	break;
+
+	case '!':
+	{
+		tvalue = lvalue != rvalue;
+	}
+	break;
+
+	case '&':
+	{
+		if (linfo.type == VIType::Bool)
+			tvalue = get<bool>(lvalue) && get<bool>(rvalue);
+	}
+	break;
+
+	case '|':
+	{
+		if (linfo.type == VIType::Bool)
+			tvalue = get<bool>(lvalue) || get<bool>(rvalue);
+	}
+	break;
+	}
+}
+
+void Shell::logicOp(string const& op, ValueInfo& target, ValueInfo& linfo, string const& rvalue)
+{
+	if (target.type == VIType::Any)
+	{
+		target.type = VIType::Bool;
+		initialize(target);
+	}
+
+	auto& tvalue = target.value;
+	auto& lvalue = linfo.value;
+
+	auto len = op.size();
+
+	switch (op[0])
+	{
+	case '<':
+	{
+		if (len > 1ull)
+			switch (linfo.type)
 			{
 			case VIType::Float:
-				temp_value = get<float>(info.value) <= stof(value);
+				tvalue = get<float>(lvalue) <= stof(rvalue);
 			break;
 
 			case VIType::Int:
-				temp_value = get<int>(info.value) <= stoi(value);
+				tvalue = get<int>(lvalue) <= stoi(rvalue);
 			break;
 
 			case VIType::String:
@@ -749,14 +1059,14 @@ void Shell::logicOp(string const& op, ValueInfo const& info, string const& value
 			}
 
 		else
-			switch (info.type)
+			switch (linfo.type)
 			{
 			case VIType::Float:
-				temp_value = get<float>(info.value) < stof(value);
+				tvalue = get<float>(lvalue) < stof(rvalue);
 			break;
 
 			case VIType::Int:
-				temp_value = get<int>(info.value) < stoi(value);
+				tvalue = get<int>(lvalue) < stoi(rvalue);
 			break;
 
 			case VIType::String:
@@ -771,14 +1081,14 @@ void Shell::logicOp(string const& op, ValueInfo const& info, string const& value
 	case '>':
 	{
 		if (len > 1ull)
-			switch (info.type)
+			switch (linfo.type)
 			{
 			case VIType::Float:
-				temp_value = get<float>(info.value) >= stof(value);
+				tvalue = get<float>(lvalue) >= stof(rvalue);
 			break;
 
 			case VIType::Int:
-				temp_value = get<int>(info.value) >= stoi(value);
+				tvalue = get<int>(lvalue) >= stoi(rvalue);
 			break;
 
 			case VIType::String:
@@ -789,14 +1099,14 @@ void Shell::logicOp(string const& op, ValueInfo const& info, string const& value
 			}
 
 		else
-			switch (info.type)
+			switch (linfo.type)
 			{
 			case VIType::Float:
-				temp_value = get<float>(info.value) > stof(value);
+				tvalue = get<float>(lvalue) > stof(rvalue);
 			break;
 
 			case VIType::Int:
-				temp_value = get<int>(info.value) > stoi(value);
+				tvalue = get<int>(lvalue) > stoi(rvalue);
 			break;
 
 			case VIType::String:
@@ -810,22 +1120,22 @@ void Shell::logicOp(string const& op, ValueInfo const& info, string const& value
 
 	case '=':
 	{
-		switch (info.type)
+		switch (linfo.type)
 		{
 		case VIType::Bool:
-			temp_value = get<bool>(info.value) == stob(value);
+			tvalue = get<bool>(lvalue) == stob(rvalue);
 		break;
 
 		case VIType::Float:
-			temp_value = get<float>(info.value) == stof(value);
+			tvalue = get<float>(lvalue) == stof(rvalue);
 		break;
 
 		case VIType::Int:
-			temp_value = get<int>(info.value) == stoi(value);
+			tvalue = get<int>(lvalue) == stoi(rvalue);
 		break;
 
 		case VIType::String:
-			temp_value = get<string>(info.value) == value;
+			tvalue = get<string>(lvalue) == rvalue;
 		break;
 					
 		default:
@@ -836,22 +1146,22 @@ void Shell::logicOp(string const& op, ValueInfo const& info, string const& value
 
 	case '!':
 	{
-		switch (info.type)
+		switch (linfo.type)
 		{
 		case VIType::Bool:
-			temp_value = get<bool>(info.value) != stob(value);
+			tvalue = get<bool>(lvalue) != stob(rvalue);
 		break;
 
 		case VIType::Float:
-			temp_value = get<float>(info.value) != stof(value);
+			tvalue = get<float>(lvalue) != stof(rvalue);
 		break;
 
 		case VIType::Int:
-			temp_value = get<int>(info.value) != stoi(value);
+			tvalue = get<int>(lvalue) != stoi(rvalue);
 		break;
 
 		case VIType::String:
-			temp_value = get<string>(info.value) != value;
+			tvalue = get<string>(lvalue) != rvalue;
 		break;
 					
 		default:
@@ -862,10 +1172,10 @@ void Shell::logicOp(string const& op, ValueInfo const& info, string const& value
 
 	case '&':
 	{
-		switch (info.type)
+		switch (linfo.type)
 		{
 		case VIType::Bool:
-			temp_value = get<bool>(info.value) && stob(value);
+			tvalue = get<bool>(lvalue) && stob(rvalue);
 		break;
 					
 		default:
@@ -876,10 +1186,10 @@ void Shell::logicOp(string const& op, ValueInfo const& info, string const& value
 
 	case '|':
 	{
-		switch (info.type)
+		switch (linfo.type)
 		{
 		case VIType::Bool:
-			temp_value = get<bool>(info.value) || stob(value);
+			tvalue = get<bool>(lvalue) || stob(rvalue);
 		break;
 					
 		default:
@@ -888,6 +1198,37 @@ void Shell::logicOp(string const& op, ValueInfo const& info, string const& value
 	}
 	break;
 	}
+}
+
+Shell::ValuePtr Shell::toValue(Token::Value const& tokenValue) const
+{
+	auto  type  = toVIType(tokenValue.type);
+	auto& text  = tokenValue.text;
+	auto  value = make_unique<Value>();
+
+	switch (type)
+	{
+	case VIType::Bool:
+		value->emplace<bool>(stob(text));
+	break;
+
+	case VIType::Float:
+		value->emplace<float>(stof(text));
+	break;
+
+	case VIType::Int:
+		value->emplace<int>(stoi(text));
+	break;
+
+	case VIType::String:
+		value->emplace<string>(text);
+	break;
+
+	default:
+		break;
+	}
+
+	return value;
 }
 
 Shell::Expression Shell::toPostfix(Expression const& infix) const

@@ -126,7 +126,9 @@ public:
 	void interpet(Tree<Token>& theTree);
 
 private:
-	using Value = variant<bool, int, float, string>;
+	using Value    = variant<bool, int, float, string>; // 48 bytes ()()()()
+	using ValuePtr = unique_ptr<Value>;
+
 	struct ValueInfo
 	{
 		enum class Type : char
@@ -149,8 +151,6 @@ private:
 		vector<string>    ids;
 		vector<ValueInfo> infos;
 
-		ValueInfo* target = nullptr;
-
 		bool   repeat = false;
 		size_t depth  = 0;
 	};
@@ -168,7 +168,7 @@ private:
 
 	void declaration();
 
-	void expression();
+	void expression(ValueInfo& target);
 
 	void expressionStatement();
 
@@ -180,7 +180,7 @@ private:
 
 	Block& openBlock();
 
-	ValueInfo closeBlock();
+	void closeBlock();
 	
 	ValueInfo& declare(string const& id, VIType type);
 
@@ -204,11 +204,21 @@ private:
 
 	bool isInitialized(Value const& value) const;
 
+	void initialize(ValueInfo& info);
 	void initialize(ValueInfo& info, string const& value);
 
-	void arithmOp(char op, ValueInfo& info, string const& value);
+	ValuePtr arithmOp(char op, VIType type, Value const& lvalue, Value const& rvalue);
+	ValuePtr arithmOp(char op, VIType type, string const& lvalue, string const& rvalue);
 
-	void logicOp(string const& op, ValueInfo const& info, string const& value);
+	void arithmOp(char op, ValueInfo& target, ValueInfo& linfo, Value const& rvalue);
+	void arithmOp(char op, ValueInfo& target, ValueInfo& linfo, string const& rvalue);
+
+	void logicOp(string const& op, ValueInfo& target, ValueInfo& linfo, Value const& rvalue);
+	void logicOp(string const& op, ValueInfo& target, ValueInfo& linfo, string const& rvalue);
+	//void logicOp(string const& op, VIType type, Value const& lvalue, Value const& rvalue);
+	//void logicOp(string const& op, VIType type, string const& lvalue, string const& rvalue);
+
+	ValuePtr toValue(Token::Value const& tokenValue) const;
 
 	using Expression = list<Token::Value const*>;
 	Expression toPostfix(Expression const& infix) const;
