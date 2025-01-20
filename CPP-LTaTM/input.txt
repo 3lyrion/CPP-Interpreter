@@ -1,15 +1,25 @@
 bool finish = false;
 float sum = 5.0 + 7.0 * (10.0 + 7.0) * 10.0;
 const float FACTOR = 2.0;
+int i = 10;
 string str = "Abcdef";
 
-if (finish)
-{
-print "Result";
-print sum;
-print FACTOR;
-print str;
-}
+i = 10 - i + 0;
 
-else { print "Tatushka"; }
+while (i < 2)
+{
+	int j = 0;
+
+	while (i >= 0 && j < 2)
+	{
+		print "Туша";
+		print sum;
+		print FACTOR;
+		print str;
+
+		j = j + 1;
+	}
+
+	i = i + 1;
+}
 ;

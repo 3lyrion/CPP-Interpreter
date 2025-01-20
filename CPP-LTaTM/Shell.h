@@ -140,32 +140,24 @@ private:
 			String
 		};
 
-		Type  type;
-		Value value;
+		Type  type{};
+		Value value{};
 	};
 
 	using VIType = ValueInfo::Type;
+	using TkValueType = Shell::Token::Value::Type;
 
 	struct Block
 	{
 		list<string>    ids;
 		list<ValueInfo> infos;
-
-		bool   repeat = false;
-		size_t depth  = 0;
 	};
 
-	Tree<Token>* tree = nullptr;
+	Tree<Token>* tree{};
 
 	list<Block> m_blocks;
 
 private:
-	void dive();
-
-	ValueInfo& search(string const& id);
-
-//	void prepare(string const& id);
-
 	void declaration();
 
 	void expression(ValueInfo& target);
@@ -181,6 +173,12 @@ private:
 	Block& openBlock();
 
 	void closeBlock();
+
+private:
+	ValueInfo& search(string const& id);
+
+	void initialize(ValueInfo& info);
+	void initialize(ValueInfo& info, string const& value);
 	
 	ValueInfo& declare(string const& id, VIType type);
 
@@ -188,42 +186,29 @@ private:
 	ValueInfo& declare();
 
 	// Temporary variable
-	ValueInfo& declare(VIType type, string const& value = "");
+	ValueInfo& declare(VIType type);
+
+	// Temporary variable
+	ValueInfo& declare(VIType type, string const& value);
 
 	// Temporary variable
 	ValueInfo& declare(VIType type, Value const& value);
-
-	void assign(string const& id, VIType type, string const& value);
-
-//	void assign(string const& id_lhs, string const& id_rhs);
-	
-	bool stob(string const& value) const;
-
-	VIType toVIType(Token::Value::Type type) const;
-	VIType toVIType(char type)               const;
-
-	bool isInitialized(Value const& value) const;
-
-	void initialize(ValueInfo& info);
-	void initialize(ValueInfo& info, string const& value);
-
-	ValuePtr arithmOp(char op, VIType type, Value const& lvalue, Value const& rvalue);
-	ValuePtr arithmOp(char op, VIType type, string const& lvalue, string const& rvalue);
 
 	void arithmOp(char op, ValueInfo& target, ValueInfo& linfo, Value const& rvalue);
 	void arithmOp(char op, ValueInfo& target, ValueInfo& linfo, string const& rvalue);
 
 	void logicOp(string const& op, ValueInfo& target, ValueInfo& linfo, Value const& rvalue);
 	void logicOp(string const& op, ValueInfo& target, ValueInfo& linfo, string const& rvalue);
-	//void logicOp(string const& op, VIType type, Value const& lvalue, Value const& rvalue);
-	//void logicOp(string const& op, VIType type, string const& lvalue, string const& rvalue);
+
+	VIType toVIType(TkValueType type) const;
+	VIType toVIType(char type)        const;
 
 	ValuePtr toValue(Token::Value const& tokenValue) const;
 
-
-
 	using Expression = list<Token::Value const*>;
 	Expression toPostfix(Expression const& infix) const;
+
+	bool stob(string const& value) const;
 };
 
 inline ostream& operator << (ostream& os, Shell::Token const& token)

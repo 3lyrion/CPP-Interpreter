@@ -1,13 +1,11 @@
 #include "Shell.h"
 
-using TkValueType = Shell::Token::Value::Type;
-
 void Shell::interpet(Tree<Token>& theTree)
 {
 	tree = &theTree;
 
-//	tree->print();
-//    return;
+	//tree->print();
+	//return;
 
 	openBlock();
 
@@ -64,68 +62,35 @@ void Shell::interpet(Tree<Token>& theTree)
 
 		if (!tree->next())
 		{
-			auto& back = m_blocks.back();
-			// ≈сли доступен возврат к условию
-			if (back.depth != 0ull)
+			tree->up();
+
+			if (auto type = tree->get().getType())
 			{
-				do
-				{
-					tree->up();
-					back.depth--;
-				}
-				while (back.depth != 0ull);
-
-				m_blocks.pop_back();
-
-				while (true)
-				{
-					tree->prev();
-					auto& token = tree->get();
-
-					if (auto type = token.getType())
-					{
-						if (*type == Token::Type::IterationStatement)
-							break;
-					}
-				}
-				tree->next();
+				if (*type == Token::Type::IterationStatement)
+					continue;
 			}
 
-			else 
+			bool end = false;
+			while (!tree->next())
 			{
-				bool end = false;
+				if (auto value = tree->get().getValue())
+				{
+					if (value->text == "program")
+					{
+						end = true;
+						break;
+					}
+				}
 
 				tree->up();
-				while (!tree->next())
-				{
-					if (auto value = tree->get().getValue())
-					{
-						if (value->text == "program")
-						{
-							end = true;
-							break;
-						}
-					}
-
-					tree->up();
-				}
-
-				if (end)
-					break;
 			}
+
+			if (end)
+				break;
 		}
 	}
 
 	closeBlock();
-}
-
-void Shell::dive()
-{
-	tree->down();
-
-	auto& back = m_blocks.back();
-	if (back.repeat)
-		back.depth++;
 }
 
 Shell::ValueInfo& Shell::search(string const& id)
@@ -148,32 +113,21 @@ Shell::ValueInfo& Shell::search(string const& id)
 	throw runtime_error("");
 }
 
-//void Shell::prepare(string const& id)
-//{
-//	auto& back   = m_blocks.back();
-//	auto& ids   = back.ids;
-//	auto& infos = back.infos;
-//
-//	auto entry = find(ids.cbegin(), ids.cend(), id);
-//	if (entry == ids.end())
-//		throw runtime_error("");
-//
-//	back.target.value = &infos[distance(ids.cbegin(), entry)];
-//}
-
 void Shell::declaration()
 {
 	tree->down();
+
 	auto type = toVIType(tree->get().getValue()->text[0]);
 
-	tree->next();
+	tree->next(); // type
+
 	auto& id = tree->get().getValue()->text;
 
 	auto& info_id = declare(id, type);
 
-	if (tree->next()) // =
+	if (tree->next()) // id
 	{
-		tree->next();
+		tree->next(); // =
 
 		expression(info_id);
 	}
@@ -183,7 +137,7 @@ void Shell::declaration()
 
 void Shell::expression(ValueInfo& target)
 {
-	dive();
+	tree->down();
 
 	auto& back  = openBlock();
 	auto& infos = back.infos;
@@ -263,10 +217,10 @@ void Shell::expression(ValueInfo& target)
 
 			else
 			{
-				auto lhs = move(infos.back()); infos.pop_back();
 				auto rhs = move(infos.back()); infos.pop_back();
+				auto lhs = move(infos.back()); infos.pop_back();
 
-				auto& var = declare(lhs.type);
+				auto& var = declare();
 
 				auto& _text = value->text;
 
@@ -279,7 +233,7 @@ void Shell::expression(ValueInfo& target)
 
 		}
 
-		target = back.infos.back();
+		target = infos.back();
 	}
 
 	tree->up();
@@ -308,17 +262,41 @@ void Shell::expression(ValueInfo& target)
 
 void Shell::expressionStatement()
 {
-		
+	tree->down();
+
+	auto& id = tree->get().getValue()->text;
+
+	auto& info_id = search(id);
+
+	tree->next(); // id
+
+	tree->next(); // =
+
+	expression(info_id);
+
+	tree->up();
 }
 
 void Shell::iterationStatement()
 {
+	tree->down();
 
+	tree->next(); // while
+	tree->next(); // (
+
+	auto& var = declare(VIType::Bool);
+	expression(var);
+
+	tree->next(); // expression
+
+	// фальш
+	if (get<bool>(var.value) == false)
+		tree->up(); 
 }
 
 void Shell::printStatement()
 {
-	dive();
+	tree->down();
 	tree->next();
 
 	auto& var = declare();
@@ -350,15 +328,15 @@ void Shell::printStatement()
 
 void Shell::selectionStatement()
 {
-	dive();
+	tree->down();
 
 	tree->next(); // if
 	tree->next(); // (
 
-	auto& var = declare();
+	auto& var = declare(VIType::Bool);
 	expression(var);
 
-	tree->next(); // Expression
+	tree->next(); // expression
 	tree->next(); // )
 
 	// фальш
@@ -423,6 +401,22 @@ Shell::ValueInfo& Shell::declare()
 }
 
 // Temporary variable
+Shell::ValueInfo& Shell::declare(VIType type)
+{
+	auto& back   = m_blocks.back();
+	auto& ids   = back.ids;
+	auto& infos = back.infos;
+
+	ids.emplace_back();
+	auto& info = infos.emplace_back();
+	info.type  = type;
+
+	initialize(info);
+		
+	return info;
+}
+
+// Temporary variable
 Shell::ValueInfo& Shell::declare(VIType type, string const& value)
 {
 	auto& back   = m_blocks.back();
@@ -433,11 +427,7 @@ Shell::ValueInfo& Shell::declare(VIType type, string const& value)
 	auto& info = infos.emplace_back();
 	info.type  = type;
 
-	if (!value.empty())
-		initialize(info, value);
-
-	else
-		initialize(info);
+	initialize(info, value);
 		
 	return info;
 }
@@ -456,51 +446,6 @@ Shell::ValueInfo& Shell::declare(VIType type, Value const& value)
 
 	return info;
 }
-
-void Shell::assign(string const& id, VIType type, string const& value)
-{
-	auto& back  = m_blocks.back();
-	auto& ids   = back.ids;
-	auto& infos = back.infos;
-
-	auto entry = find(ids.cbegin(), ids.cend(), id);
-	if (entry == ids.end())
-		throw runtime_error("");
-
-	auto it = infos.begin();
-	advance(it, distance(ids.cbegin(), entry));
-	auto& info = *it;
-
-//	auto& info = infos[distance(ids.cbegin(), entry)];
-
-	if (info.type != type)
-		throw runtime_error("");
-
-	initialize(info, value);
-}
-
-//void Shell::assign(string const& id_lhs, string const& id_rhs)
-//{
-//	auto& back   = m_blocks.back();
-//	auto& ids   = back.ids;
-//	auto& infos = back.infos;
-//
-//	auto entry_lhs = find(ids.cbegin(), ids.cend(), id_lhs);
-//	if (entry_lhs == ids.end())
-//		throw runtime_error("");
-//
-//	auto entry_rhs = find(ids.cbegin(), ids.cend(), id_rhs);
-//	if (entry_rhs == ids.end())
-//		throw runtime_error("");
-//
-//	auto& info_lhs = infos[distance(ids.cbegin(), entry_lhs)];
-//	auto& info_rhs = infos[distance(ids.cbegin(), entry_rhs)];
-//
-//	if (info_lhs.type != info_rhs.type)
-//		throw runtime_error("");
-//
-//	info_lhs.value = info_rhs.value;
-//}
 	
 bool Shell::stob(string const& value) const
 {
@@ -550,11 +495,6 @@ Shell::VIType Shell::toVIType(char type) const
 	default:
 		throw runtime_error("");
 	}
-}
-
-bool Shell::isInitialized(Value const& value) const
-{
-	return value.index() != variant_npos;
 }
 
 void Shell::initialize(ValueInfo& info)
@@ -748,16 +688,6 @@ void Shell::arithmOp(char op, ValueInfo& target, ValueInfo& linfo, Value const& 
 	}
 }
 
-//Shell::ValuePtr Shell::arithmOp(char op, VIType type, Value const& lvalue, Value const& rvalue)
-//{
-//
-//}
-//
-//Shell::ValuePtr Shell::arithmOp(char op, VIType type, string const& lvalue, string const& rvalue)
-//{
-//
-//}
-
 void Shell::arithmOp(char op, ValueInfo& target, ValueInfo& linfo, string const& rvalue)
 {
 	if (target.type == VIType::Any)
@@ -901,7 +831,7 @@ void Shell::arithmOp(char op, ValueInfo& target, ValueInfo& linfo, string const&
 
 void Shell::logicOp(string const& op, ValueInfo& target, ValueInfo& linfo, Value const& rvalue)
 {
-	if (target.type == VIType::Any)
+	if (target.type != VIType::Bool)
 	{
 		target.type = VIType::Bool;
 		initialize(target);
