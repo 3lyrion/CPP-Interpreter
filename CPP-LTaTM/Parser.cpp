@@ -371,7 +371,11 @@ Parser::TTreePtr Parser::operand()
 		{
 			raise();
 
-			tree->emplace_back(v);
+			if (v[0] == '-')
+				tree->emplace_back("~", VType::Operator); // !!!!!!!!!!!!!!
+
+			else
+				tree->emplace_back("!", VType::Operator);
 		}
 	}
 

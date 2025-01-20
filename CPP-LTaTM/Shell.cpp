@@ -24,10 +24,6 @@ void Shell::interpet(Tree<Token>& theTree)
 				declaration();
 			break;
 
-			//case Token::Type::Expression:
-			//	expression();
-			//break;
-
 			case Token::Type::ExpressionStatement:
 				expressionStatement();
 			break;
@@ -101,7 +97,6 @@ Shell::ValueInfo& Shell::search(string const& id)
 
 		auto entry = find(ids.cbegin(), ids.cend(), id);
 		if (entry != ids.cend())
-	//		return block.infos[distance(ids.cbegin(), entry)];
 		{
 			auto it = block.infos.begin();
 			advance(it, distance(ids.cbegin(), entry));
@@ -217,18 +212,24 @@ void Shell::expression(ValueInfo& target)
 
 			else
 			{
-				auto rhs = move(infos.back()); infos.pop_back();
-				auto lhs = move(infos.back()); infos.pop_back();
+				auto& text = value->text;
 
-				auto& var = declare();
-
-				auto& _text = value->text;
-
-				if (_text[0] == '<' || _text[0] == '>' || _text.size() == 2ull)
-					logicOp(_text, var, lhs, rhs.value);
+				if (text[0] == '~' || text[0] == '!')
+					unaryOp(text[0], infos.back());
 
 				else
-					arithmOp(_text[0], var, lhs, rhs.value);
+				{
+					auto rhs = move(infos.back()); infos.pop_back();
+					auto lhs = move(infos.back()); infos.pop_back();
+
+					auto& var = declare();
+
+					if (text[0] == '<' || text[0] == '>' || text.size() == 2ull)
+						logicOp(text, var, lhs, rhs.value);
+
+					else
+						arithmOp(text[0], var, lhs, rhs.value);
+				}
 			}
 
 		}
@@ -238,26 +239,6 @@ void Shell::expression(ValueInfo& target)
 
 	tree->up();
 	closeBlock();
-
-//	auto result = closeBlock();
-
-	//auto target.value = m_blocks.back().target;
-	//if (target)
-	//{
-	//	if (target->type == result.type)
-	//		target->value = result.value;
-
-	//	else if (target->type == VIType::Any)
-	//	{
-	//		target->type  = result.type;
-	//		target->value = result.value;
-	//	}
-	//		
-	//	else
-	//		throw runtime_error("");
-
-	//	target.value = nullptr;
-	//}
 }
 
 void Shell::expressionStatement()
@@ -544,6 +525,48 @@ void Shell::initialize(ValueInfo& info, string const& value)
 
 	default:
 		break;
+	}
+}
+
+void Shell::unaryOp(char op, ValueInfo& target)
+{
+	auto& tvalue = target.value;
+
+	switch (op)
+	{
+	case '~':
+	{
+		switch (target.type)
+		{
+		case VIType::Float:
+		{
+			auto& value = get<float>(tvalue);
+			value = -value;
+		}
+		break;
+
+		case VIType::Int:
+		{
+			auto& value = get<int>(tvalue);
+			value = -value;
+		}
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
+
+	case '!':
+	{
+		if (target.type == VIType::Bool)
+		{
+			auto& value = get<bool>(tvalue);
+			value = !value;
+		}
+	}
+	break;
 	}
 }
 
@@ -1123,8 +1146,11 @@ Shell::Expression Shell::toPostfix(Expression const& infix) const
 		if (op == '*' || op == '/' || op == '%')
 			return 6;
 
-		if (op == '^')
+		if (op == '~' || op == '!')
 			return 7;
+
+		if (op == '^')
+			return 8;
 
 		return 0;
 	};

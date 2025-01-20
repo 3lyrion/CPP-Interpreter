@@ -194,6 +194,8 @@ private:
 	// Temporary variable
 	ValueInfo& declare(VIType type, Value const& value);
 
+	void unaryOp(char op, ValueInfo& target);
+
 	void arithmOp(char op, ValueInfo& target, ValueInfo& linfo, Value const& rvalue);
 	void arithmOp(char op, ValueInfo& target, ValueInfo& linfo, string const& rvalue);
 
