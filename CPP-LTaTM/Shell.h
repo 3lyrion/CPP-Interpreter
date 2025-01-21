@@ -129,7 +129,7 @@ private:
 	using Value    = variant<bool, int, float, string>; // 48 bytes ()()()()
 	using ValuePtr = unique_ptr<Value>;
 
-	struct ValueInfo
+	struct Variable
 	{
 		enum class Type : char
 		{
@@ -140,18 +140,22 @@ private:
 			String
 		};
 
-		Type  type{};
-		Value value{};
+		optional<string> id{};
+		Type             type{};
+		Value            value{};
+
+		inline Variable& operator = (Variable const& var)
+		{
+			type  = var.type;
+			value = var.value;
+
+			return *this;
+		}
 	};
 
-	using VIType = ValueInfo::Type;
+	using VType       = Variable::Type;
 	using TkValueType = Shell::Token::Value::Type;
-
-	struct Block
-	{
-		list<string>    ids;
-		list<ValueInfo> infos;
-	};
+	using Block       = list<Variable>; 
 
 	Tree<Token>* tree{};
 
@@ -160,7 +164,7 @@ private:
 private:
 	void declaration();
 
-	void expression(ValueInfo& target);
+	void expression(Variable& target);
 
 	void expressionStatement();
 
@@ -175,35 +179,35 @@ private:
 	void closeBlock();
 
 private:
-	ValueInfo& search(string const& id);
+	Variable& search(string const& id);
 
-	void initialize(ValueInfo& info);
-	void initialize(ValueInfo& info, string const& value);
+	void initialize(Variable& var);
+	void initialize(Variable& var, string const& value);
 	
-	ValueInfo& declare(string const& id, VIType type);
+	Variable& declare(string const& id, VType type);
 
 	// Temporary variable
-	ValueInfo& declare();
+	Variable& declare();
 
 	// Temporary variable
-	ValueInfo& declare(VIType type);
+	Variable& declare(VType type);
 
 	// Temporary variable
-	ValueInfo& declare(VIType type, string const& value);
+	Variable& declare(VType type, string const& value);
 
 	// Temporary variable
-	ValueInfo& declare(VIType type, Value const& value);
+	Variable& declare(VType type, Value const& value);
 
-	void unaryOp(char op, ValueInfo& target);
+	void unaryOp(char op, Variable& target);
 
-	void arithmOp(char op, ValueInfo& target, ValueInfo& linfo, Value const& rvalue);
-	void arithmOp(char op, ValueInfo& target, ValueInfo& linfo, string const& rvalue);
+	void arithmOp(char op, Variable& target, Variable& lvar, Value const& rvalue);
+	void arithmOp(char op, Variable& target, Variable& lvar, string const& rvalue);
 
-	void logicOp(string const& op, ValueInfo& target, ValueInfo& linfo, Value const& rvalue);
-	void logicOp(string const& op, ValueInfo& target, ValueInfo& linfo, string const& rvalue);
+	void logicOp(string const& op, Variable& target, Variable& lvar, Value const& rvalue);
+	void logicOp(string const& op, Variable& target, Variable& lvar, string const& rvalue);
 
-	VIType toVIType(TkValueType type) const;
-	VIType toVIType(char type)        const;
+	VType toVIType(TkValueType type) const;
+	VType toVIType(char type)        const;
 
 	ValuePtr toValue(Token::Value const& tokenValue) const;
 
