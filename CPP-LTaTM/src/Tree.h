@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Precompiled.h"
+#include <Precompiled.h>
 
 template <typename T>
 class Tree

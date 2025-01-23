@@ -11,47 +11,30 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DFA.cpp">
+    <ClCompile Include="src\Parser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Lexer.cpp">
+    <ClCompile Include="src\Shell.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LexerRegex.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Old.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Parser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Shell.cpp">
+    <ClCompile Include="src\Lexer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DFA.hpp">
+    <ClInclude Include="src\Precompiled.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="Lexer.hpp">
+    <ClInclude Include="src\Parser.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="Precompiled.h">
+    <ClInclude Include="src\Tree.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="Parser.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BinTree.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Tree.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Shell.h" />
+    <ClInclude Include="src\Shell.h" />
+    <ClInclude Include="src\Lexer.h" />
   </ItemGroup>
 </Project>

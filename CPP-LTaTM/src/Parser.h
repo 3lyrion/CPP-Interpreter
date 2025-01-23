@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Lexer.hpp"
-#include "Shell.h"
+#include <Lexer.h>
+#include <Shell.h>
 
 class Parser
 {
@@ -9,20 +9,18 @@ public:
 	using TTree    = Tree<Shell::Token>;
 	using TTreePtr = uptr<TTree>;
 
-	Parser(Lexer& theLexer);
+	Parser() = default;
 
-	TTreePtr parse();
+	TTreePtr parse(vector<Lexer::Token> const& theTokens);
 
 private:
-	Lexer& lexer;
+	vector<Lexer::Token> const* tokens{};
+	Lexer::Token         const* token{};
 
-	vector<Lexer::Token> const* tokens = nullptr;
-	Lexer::Token         const* token  = nullptr;
+	TTreePtr m_tree{};
 
-	TTreePtr m_tree = nullptr;
-
-	size_t m_index = 0;
-	size_t m_trace = 0;
+	size_t m_index{};
+	size_t m_trace{};
 
 	unordered_set<Shell::Token, Shell::Token::Hash> m_exclude =
 	{

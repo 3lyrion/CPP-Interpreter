@@ -1,22 +1,14 @@
-#include "Parser.h"
-
-#include "Precompiled.h"
+#include <Parser.h>
 
 using LType = Lexer::Token::Type;
 using TType = Shell::Token::Type;
 using VType = Shell::Token::Value::Type;
 
-Parser::Parser(Lexer& theLexer) : 
-	lexer(theLexer)
-{
-
-}
-
-Parser::TTreePtr Parser::parse()
+Parser::TTreePtr Parser::parse(vector<Lexer::Token> const& theTokens)
 {
 //	try 
 //	{
-		tokens = &lexer.tokenize();
+		tokens = &theTokens;
 		
 		m_tree = program();
 

@@ -121,6 +121,8 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>Precompiled.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)Precompiled.pch</PrecompiledHeaderOutputFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,6 +141,8 @@
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>Precompiled.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -148,22 +152,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="DFA.cpp" />
-    <ClCompile Include="Lexer.cpp" />
-    <ClCompile Include="LexerRegex.cpp" />
-    <ClCompile Include="Old.cpp" />
-    <ClCompile Include="Parser.cpp" />
-    <ClCompile Include="Shell.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Parser.cpp" />
+    <ClCompile Include="src\Shell.cpp" />
+    <ClCompile Include="src\Lexer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BinTree.h" />
-    <ClInclude Include="DFA.hpp" />
-    <ClInclude Include="Lexer.hpp" />
-    <ClInclude Include="Parser.h" />
-    <ClInclude Include="Precompiled.h" />
-    <ClInclude Include="Shell.h" />
-    <ClInclude Include="Tree.h" />
+    <ClInclude Include="src\Parser.h" />
+    <ClInclude Include="src\Precompiled.h" />
+    <ClInclude Include="src\Shell.h" />
+    <ClInclude Include="src\Lexer.h" />
+    <ClInclude Include="src\Tree.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

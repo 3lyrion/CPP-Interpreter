@@ -1,6 +1,4 @@
-#include "Precompiled.h"
-
-#include "Parser.h"
+#include <Parser.h>
 
 //#include "Tree.h"
 
@@ -40,10 +38,14 @@ int main()
 
     setvbuf(stdout, nullptr, _IONBF, 0);
     
-    Lexer lexer("input.txt");
-    Parser parser(lexer);
+    Lexer lexer;
+    auto& tokens = lexer.tokenize("input.txt");
+
+    Parser parser;
+    auto tree = parser.parse(tokens);
+
     Shell shell;
-    shell.interpet(*parser.parse().release());
+    shell.interpet(*tree.release());
     
  //   list<int> l1 { 1, 2, 5 };
  //   list<int> l2 { 2, 3, 4 };

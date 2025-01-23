@@ -24,4 +24,3 @@ while (!finish)
 
 	finish = i == 2;
 }
-;
