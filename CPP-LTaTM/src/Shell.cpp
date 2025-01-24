@@ -1,5 +1,8 @@
 #include "Shell.h"
 
+//#define TRY_CONVERSION(expression) try { expression } catch(exception& e) { print
+
+
 void Shell::interpet(Tree<Token>& theTree)
 {
 	tree = &theTree;
@@ -107,7 +110,7 @@ Shell::Variable& Shell::search(string const& id)
 			return *entry;
 	}
 
-	throw runtime_error("");
+	throw exception("");
 }
 
 void Shell::declaration()
@@ -226,10 +229,10 @@ void Shell::expression(Variable& target)
 					auto& var = declare();
 
 					if (text[0] == '<' || text[0] == '>' || text.size() == 2ull)
-						logicOp(text, var, lhs, rhs.value);
+						logicOp(text, var, lhs, rhs);
 
 					else
-						arithmOp(text[0], var, lhs, rhs.value);
+						arithmOp(text[0], var, lhs, rhs);
 				}
 			}
 
@@ -355,7 +358,7 @@ Shell::Variable& Shell::declare(string const& id, VType type)
 	auto& vars = m_blocks.back();
 
 	try { search(id); }
-	catch (runtime_error&)
+	catch (exception&)
 	{
 		auto& var = vars.emplace_back();
 		var.id    = id;
@@ -365,7 +368,7 @@ Shell::Variable& Shell::declare(string const& id, VType type)
 		return var;
 	}
 
-	throw runtime_error(""); // repeated declaration of the variable
+	throw exception(""); // repeated declaration of the variable
 }
 
 // Temporary variable
@@ -440,7 +443,7 @@ Shell::VType Shell::toVIType(TkValueType type) const
 		return VType::String;
 
 	default:
-		throw runtime_error("");
+		throw exception("");
 	}
 }
 
@@ -461,7 +464,7 @@ Shell::VType Shell::toVIType(char type) const
 		return VType::String;
 
 	default:
-		throw runtime_error("");
+		throw exception("");
 	}
 }
 
@@ -557,7 +560,7 @@ void Shell::unaryOp(char op, Variable& target)
 	}
 }
 
-void Shell::arithmOp(char op, Variable& target, Variable& lvar, Value const& rvalue)
+void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& rvar)
 {
 	if (target.type == VType::Any)
 	{
@@ -567,6 +570,7 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Value const& rva
 
 	auto& tvalue = target.value;
 	auto& lvalue = lvar.value;
+	auto& rvalue = rvar.value;
 
 	switch (op)
 	{
@@ -839,7 +843,7 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 	}
 }
 
-void Shell::logicOp(string const& op, Variable& target, Variable& lvar, Value const& rvalue)
+void Shell::logicOp(string const& op, Variable& target, Variable& lvar, Variable const& rvar)
 {
 	if (target.type != VType::Bool)
 	{
@@ -849,6 +853,7 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, Value co
 
 	auto& tvalue = target.value;
 	auto& lvalue = lvar.value;
+	auto& rvalue = rvar.value;
 
 	auto len = op.size();
 
@@ -923,14 +928,12 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 			switch (lvar.type)
 			{
 			case VType::Float:
-				tvalue = get<float>(lvalue) <= stof(rvalue);
+				try { tvalue = get<float>(lvalue) <= stof(rvalue); }
+				catch (exception& e) { throwConversionError(lvar, get<float>(lvalue), rvalue, op, e); }
 			break;
 
 			case VType::Int:
 				tvalue = get<int>(lvalue) <= stoi(rvalue);
-			break;
-
-			case VType::String:
 			break;
 					
 			default:

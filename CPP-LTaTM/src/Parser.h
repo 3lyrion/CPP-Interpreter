@@ -30,44 +30,50 @@ private:
 	};
 
 private:
+	void fatalError();
+
 	void seek();
 
 	Lexer::Token const* peek();
+
+	void taste(Lexer::Token::Type type);
 
 	void eat(Lexer::Token::Type type);
 
 	void raise();
 
+	void compare(string const& value);
+
 private:
-	TTreePtr program();
+	void program(TTree& tree);
 
 	TTreePtr declaration();
 
-	TTreePtr typeSpec();
+	void typeSpec(TTree& tree);
 
 	TTreePtr expression();
 
-	TTreePtr logic1();
+	void logic1(TTree& tree);
 
-	TTreePtr logic2();
+	void logic2(TTree& tree);
 
-	TTreePtr logic3();
+	void logic3(TTree& tree);
 
-	TTreePtr term();
+	void term(TTree& tree);
 
-	TTreePtr factor();
+	void factor(TTree& tree);
 
-	TTreePtr power();
+	void power(TTree& tree);
 
-	TTreePtr operand();
+	void operand(TTree& tree);
 
-	TTreePtr literal();
+	void literal(TTree& tree);
 
-	TTreePtr statement();
+	void statement(TTree& tree);
 
 	TTreePtr selStmt();
 
-	TTreePtr block();
+	void block(TTree& tree);
 
 	TTreePtr iterStmt();
 

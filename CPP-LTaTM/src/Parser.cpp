@@ -6,40 +6,32 @@ using VType = Shell::Token::Value::Type;
 
 Parser::TTreePtr Parser::parse(vector<Lexer::Token> const& theTokens)
 {
-//	try 
-//	{
-		tokens = &theTokens;
-		
-		m_tree = program();
+	tokens = &theTokens;
 
-		if (m_trace < tokens->size() - 1)
-		{
-			auto& token = (*tokens)[m_trace];
+	m_tree = make_unique<TTree>("program");
+	program(*m_tree);
 
-			printf("Unexpected token (l. %d, s. %d) : '%s'\n", token.line, token.symbol, token.value.c_str());
-		}
+	if (m_trace < tokens->size() - 1)
+		fatalError();
 
-		else
-		{
-			m_tree->exclude(m_exclude);
-//			m_tree->print();
-		}
-
-		return move(m_tree);
-//	}
-//	catch (runtime_error e)
-//	{
-//		cout << e.what() << '\n';
-
-	//	return nullptr;
-//	}
+	return move(m_tree);
 }
 
+void Parser::fatalError()
+{
+	auto& token = (*tokens)[m_trace];
+
+	printf("Unexpected token (l. %d, s. %d) : '%s'\n", token.line, token.symbol, token.value.c_str());
+
+	system("pause");
+
+	exit(EXIT_FAILURE);
+}
 
 void Parser::seek()
 {
 	if (m_index > tokens->size() - 1)
-		throw "";
+		throw "The end";
 
 	token = &(*tokens)[m_index];
 
@@ -54,12 +46,20 @@ Lexer::Token const* Parser::peek()
 	return &(*tokens)[m_index];
 }
 
+void Parser::taste(LType type)
+{
+	seek();
+
+	if (token->type != type)
+		throw logic_error("The token type does not match");
+}
+
 void Parser::eat(LType type)
 {
 	seek();
 
 	if (token->type != type)
-		throw runtime_error("");
+		fatalError();
 }
 
 void Parser::raise()
@@ -68,30 +68,34 @@ void Parser::raise()
 	m_index++;
 }
 
-Parser::TTreePtr Parser::program()
+void Parser::compare(string const& value)
 {
-	auto tree = make_unique<TTree>(__func__);
+	if (token->value != value)
+		fatalError();
+}
 
+void Parser::program(TTree& tree)
+{
 	while (true)
 	{
 		auto index = m_index;
 
-		try { tree->push_back(move(*declaration().release())); }
+		try { tree.push_back(move(*declaration().release())); }
 		catch (...)
 		{
 			m_index = index;
 
-			try { tree->push_back(move(*statement().release())); }
+			try { statement(tree); }
 			catch (...)
 			{
 				m_index = index;
 
-				try { tree->push_back(move(*block().release())); }
+				try { block(tree); }
 				catch (...)
 				{
 					m_index = index;
 
-					return tree;
+					return;
 				}
 			}
 		}
@@ -102,18 +106,14 @@ Parser::TTreePtr Parser::declaration()
 {
 	auto index = m_index;
 
+	auto tree = make_unique<TTree>(TType::Declaration);
+
 	try
 	{
-		auto tree = make_unique<TTree>(TType::Declaration);
-
-		tree->push_back(move(*typeSpec().release()));
+		typeSpec(*tree);
 
 		eat(LType::Id);
-		{
-			TTree _tree("id");
-			_tree.emplace_back(token->value);
-			tree->push_back(move(_tree));
-		}
+		tree->emplace_back(token->value);
 
 		if (auto t = peek())
 		{
@@ -123,73 +123,56 @@ Parser::TTreePtr Parser::declaration()
 				raise();
 
 				tree->emplace_back(v);
+
 				tree->push_back(move(*expression().release()));
 			}
 		}
 
 		eat(LType::Separator);
-		if (token->value == ";")
+		compare(";");
+
+		return tree;
+	}
+
+	catch (exception&)
+	{
+		m_index = index;
+
+		taste(LType::Keyword);
+		if (token->value == "const")
 		{
+		//	tree->emplace_back(token->value);
+
+			typeSpec(*tree);
+
+			eat(LType::Id);
 			tree->emplace_back(token->value);
+
+			eat(LType::Operator);
+			compare("=");
+			tree->emplace_back(token->value);
+
+			tree->push_back(move(*expression().release()));
+
+			eat(LType::Separator);
+			compare(";");
 
 			return tree;
 		}
 	}
 
-	catch (...)
-	{
-		auto tree = make_unique<TTree>(TType::Declaration);
-
-		m_index = index;
-
-		eat(LType::Keyword);
-		if (token->value == "const")
-		{
-			tree->emplace_back(token->value);
-
-			tree->push_back(move(*typeSpec().release()));
-
-			eat(LType::Id);
-			{
-				TTree _tree("id");
-				_tree.emplace_back(token->value);
-				tree->push_back(move(_tree));
-			}
-
-			eat(LType::Operator);
-			if (token->value == "=")
-			{
-				tree->emplace_back(token->value);
-				tree->push_back(move(*expression().release()));
-
-				eat(LType::Separator);
-				if (token->value == ";")
-				{
-					tree->emplace_back(token->value);
-
-					return tree;
-				}
-			}
-		}
-	}
-
-	throw runtime_error("");
+	throw exception("");
 }
 
-Parser::TTreePtr Parser::typeSpec()
+void Parser::typeSpec(TTree& tree)
 {
-	auto tree = make_unique<TTree>(__func__);
-
-	eat(LType::Keyword);
+	taste(LType::Keyword);
 	auto& v = token->value;
 	if (v == "bool" || v == "float" || v == "int" || v == "string")
-	{
-		tree->emplace_back(v);
+		tree.emplace_back(v);
 
-		return tree;
-	}
-
-	throw runtime_error("");
+	else
+		throw exception("");
 }
 
 Parser::TTreePtr Parser::expression()
@@ -197,7 +180,7 @@ Parser::TTreePtr Parser::expression()
 	auto tree = make_unique<TTree>(TType::Expression);
 
 begin:
-	tree->push_back(move(*logic1().release()));
+	logic1(*tree);
 
 	if (auto t = peek())
 	{
@@ -215,12 +198,10 @@ begin:
 	return tree;
 }
 
-Parser::TTreePtr Parser::logic1()
+void Parser::logic1(TTree& tree)
 {
-	auto tree = make_unique<TTree>(__func__);
-
 begin:
-	tree->push_back(move(*logic2().release()));
+	logic2(tree);
 
 	if (auto t = peek())
 	{
@@ -228,21 +209,17 @@ begin:
 		{
 			raise();
 
-			tree->emplace_back(t->value, VType::Operator);
+			tree.emplace_back(t->value, VType::Operator);
 
 			goto begin;
 		}
 	}
-
-	return tree;
 }
 
-Parser::TTreePtr Parser::logic2()
+void Parser::logic2(TTree& tree)
 {
-	auto tree = make_unique<TTree>(__func__);
-
 begin:
-	tree->push_back(move(*logic3().release()));
+	logic3(tree);
 
 	if (auto t = peek())
 	{
@@ -251,21 +228,17 @@ begin:
 		{
 			raise();
 
-			tree->emplace_back(v, VType::Operator);
+			tree.emplace_back(v, VType::Operator);
 
 			goto begin;
 		}
 	}
-
-	return tree;
 }
 
-Parser::TTreePtr Parser::logic3()
+void Parser::logic3(TTree& tree)
 {
-	auto tree = make_unique<TTree>(__func__);
-
 begin:
-	tree->push_back(move(*term().release()));
+	term(tree);
 
 	if (auto t = peek())
 	{
@@ -274,21 +247,17 @@ begin:
 		{
 			raise();
 
-			tree->emplace_back(v, VType::Operator);
+			tree.emplace_back(v, VType::Operator);
 
 			goto begin;
 		}
 	}
-
-	return tree;
 }
 
-Parser::TTreePtr Parser::term()
+void Parser::term(TTree& tree)
 {
-	auto tree = make_unique<TTree>(__func__);
-
 begin:
-	tree->push_back(move(*factor().release()));
+	factor(tree);
 
 	if (auto t = peek())
 	{
@@ -297,21 +266,17 @@ begin:
 		{
 			raise();
 
-			tree->emplace_back(v, VType::Operator);
+			tree.emplace_back(v, VType::Operator);
 
 			goto begin;
 		}
 	}
-
-	return tree;
 }
 
-Parser::TTreePtr Parser::factor()
+void Parser::factor(TTree& tree)
 {
-	auto tree = make_unique<TTree>(__func__);
-
 begin:
-	tree->push_back(move(*power().release()));
+	power(tree);
 
 	if (auto t = peek())
 	{
@@ -320,21 +285,17 @@ begin:
 		{
 			raise();
 
-			tree->emplace_back(v, VType::Operator);
+			tree.emplace_back(v, VType::Operator);
 
 			goto begin;
 		}
 	}
-
-	return tree;
 }
 
-Parser::TTreePtr Parser::power()
+void Parser::power(TTree& tree)
 {
-	auto tree = make_unique<TTree>(__func__);
-
 begin:
-	tree->push_back(move(*operand().release()));
+	operand(tree);
 
 	if (auto t = peek())
 	{
@@ -343,18 +304,16 @@ begin:
 		{
 			raise();
 
-			tree->emplace_back(v, VType::Operator);
+			tree.emplace_back(v, VType::Operator);
 
 			goto begin;
 		}
 	}
-
-	return tree;
 }
 
-Parser::TTreePtr Parser::operand()
+void Parser::operand(TTree& tree)
 {
-	auto tree = make_unique<TTree>(__func__);
+	bool un = false;
 
 	if (auto t = peek())
 	{
@@ -364,10 +323,12 @@ Parser::TTreePtr Parser::operand()
 			raise();
 
 			if (v[0] == '-')
-				tree->emplace_back("~", VType::Operator); // !!!!!!!!!!!!!!
+				tree.emplace_back("~", VType::Operator); // !!!!!!!!!!!!!!
 
 			else
-				tree->emplace_back("!", VType::Operator);
+				tree.emplace_back("!", VType::Operator);
+
+			un = true;
 		}
 	}
 
@@ -377,216 +338,182 @@ Parser::TTreePtr Parser::operand()
 		{
 			raise();
 
-			tree->emplace_back(t->value, VType::Operator);
+			tree.emplace_back(t->value, VType::Operator);
 
-			tree->push_back(move(*expression().release()));
+			tree.push_back(move(*expression().release()));
 
 			eat(LType::Operator);
-			if (token->value == ")")
-			{
-				tree->emplace_back(token->value, VType::Operator);
+			compare(")");
+			tree.emplace_back(token->value, VType::Operator);
 
-				return tree;
-			}
+			return;
 		}
 
 		else if (t->type == LType::Id)
 		{
 			raise();
 
-			{
-				TTree _tree("id");
-				_tree.emplace_back(t->value, VType::Id);
-				tree->push_back(move(_tree));
-			}
+			tree.emplace_back(t->value, VType::Id);
 
-			return tree;
+			return;
 		}
 
 		else
 		{
-			tree->push_back(move(*literal().release()));
+			literal(tree);
 
-			return tree;
+			return;
 		}
+
+		fatalError();
 	}
 
-	throw runtime_error("");
+	else if (un)
+		fatalError();
+
+	throw exception("");
 }
 
-Parser::TTreePtr Parser::literal()
+void Parser::literal(TTree& tree)
 {
-	auto tree = make_unique<TTree>(__func__);
-
 	seek();
 
 	if (token->type == LType::FloatLiteral)
-	{
-		tree->emplace_back(token->value, VType::FloatLiteral);
+		tree.emplace_back(token->value, VType::FloatLiteral);
 
-		return tree;
-	}
+	else if (token->type == LType::IntLiteral)
+		tree.emplace_back(token->value, VType::IntLiteral);
 
-	if (token->type == LType::IntLiteral)
-	{
-		tree->emplace_back(token->value, VType::IntLiteral);
+	else if (token->type == LType::StringLiteral)
+		tree.emplace_back(token->value, VType::StringLiteral);
 
-		return tree;
-	}
+	else if (token->value == "true" || token->value == "false")
+		tree.emplace_back(token->value, VType::BoolLiteral);
 
-	if (token->type == LType::StringLiteral)
-	{
-		tree->emplace_back(token->value, VType::StringLiteral);
-
-		return tree;
-	}
-
-	if (token->value == "true" || token->value == "false")
-	{
-		tree->emplace_back(token->value, VType::BoolLiteral);
-
-		return tree;
-	}
-
-	throw runtime_error("");
+	else
+		fatalError();
 }
 
-Parser::TTreePtr Parser::statement()
+void Parser::statement(TTree& tree)
 {
-	auto tree = make_unique<TTree>(__func__);
-
 	auto index = m_index;
 
-	try { tree->push_back(move(*selStmt().release())); }
+	try { tree.push_back(move(*selStmt().release())); }
 	catch (...)
 	{
 		m_index = index;
 
-		try { tree->push_back(move(*iterStmt().release())); }
+		try { tree.push_back(move(*iterStmt().release())); }
 		catch (...)
 		{
 			m_index = index;
 
-			try { tree->push_back(move(*printStmt().release())); }
+			try { tree.push_back(move(*printStmt().release())); }
 			catch (...)
 			{
 				m_index = index;
 
-				try { tree->push_back(move(*exprStmt().release())); }
+				try { tree.push_back(move(*exprStmt().release())); }
 				catch (...)
 				{
-					throw runtime_error("");
+					throw exception("");
 				}
 			}
 		}
 	}
-
-	return tree;
 }
 
 Parser::TTreePtr Parser::selStmt()
 {
 	auto tree = make_unique<TTree>(TType::SelectionStatement);
 
-	eat(LType::Keyword);
+	taste(LType::Keyword);
 	if (token->value == "if")
 	{
 		tree->emplace_back(token->value);
 
 		eat(LType::Operator);
-		if (token->value == "(")
-		{
-			tree->emplace_back(token->value);
-
-			tree->push_back(move(*expression().release()));
-
-			eat(LType::Operator);
-			if (token->value == ")")
-			{
-				tree->emplace_back(token->value);
-
-				tree->push_back(move(*block().release()));
-
-				if (auto t = peek())
-				{
-					auto& v = t->value;
-					if (v == "else")
-					{
-						raise();
-
-						tree->emplace_back(v);
-
-						tree->push_back(move(*block().release()));
-					}
-				}
-
-				return tree;
-			}
-		}
-	}
-
-	throw runtime_error("");
-}
-
-Parser::TTreePtr Parser::block()
-{
-	auto tree = make_unique<TTree>(__func__);
-
-	eat(LType::Separator);
-	if (token->value == "{")
-	{
+		compare("(");
 		tree->emplace_back(token->value);
 
-		tree->push_back(move(*program().release()));
+		tree->push_back(move(*expression().release()));
 
-		eat(LType::Separator);
-		if (token->value == "}")
+		eat(LType::Operator);
+		compare(")");
+		tree->emplace_back(token->value);
+
+		block(*tree);
+
+		if (auto t = peek())
 		{
-			tree->emplace_back(token->value);
+			auto& v = t->value;
+			if (v == "else")
+			{
+				raise();
 
-			return tree;
+				tree->emplace_back(v);
+
+				block(*tree);
+			}
 		}
+
+		return tree;
 	}
 
-	throw runtime_error("");
+	throw exception("");
+}
+
+void Parser::block(TTree& tree)
+{
+	taste(LType::Separator);
+	if (token->value == "{")
+	{
+		tree.emplace_back(token->value);
+
+		program(tree);
+
+		eat(LType::Separator);
+		compare("}");
+		tree.emplace_back(token->value);
+
+		return;
+	}
+
+	throw exception("");
 }
 
 Parser::TTreePtr Parser::iterStmt()
 {
 	auto tree = make_unique<TTree>(TType::IterationStatement);
 
-	eat(LType::Keyword);
+	taste(LType::Keyword);
 	if (token->value == "while")
 	{
 		tree->emplace_back(token->value);
 
 		eat(LType::Operator);
-		if (token->value == "(")
-		{
-			tree->emplace_back(token->value);
+		compare("(");
+		tree->emplace_back(token->value);
 
-			tree->push_back(move(*expression().release()));
+		tree->push_back(move(*expression().release()));
 
-			eat(LType::Operator);
-			if (token->value == ")")
-			{
-				tree->emplace_back(token->value);
+		eat(LType::Operator);
+		compare(")");
+		tree->emplace_back(token->value);
 
-				tree->push_back(move(*block().release()));
+		block(*tree);
 
-				return tree;
-			}
-		}
+		return tree;
 	}
 
-	throw runtime_error("");
+	throw exception("");
 }
 
 Parser::TTreePtr Parser::printStmt()
 {
 	auto tree = make_unique<TTree>(TType::PrintStatement);
 
-	eat(LType::Keyword);
+	taste(LType::Keyword);
 	if (token->value == "print")
 	{
 		tree->emplace_back(token->value);
@@ -594,43 +521,29 @@ Parser::TTreePtr Parser::printStmt()
 		tree->push_back(move(*expression().release()));
 
 		eat(LType::Separator);
-		if (token->value == ";")
-		{
-			tree->emplace_back(token->value);
+		compare(";");
 
-			return tree;
-		}
+		return tree;
 	}
 
-	throw runtime_error("");
+	throw exception("");
 }
 
 Parser::TTreePtr Parser::exprStmt()
 {
 	auto tree = make_unique<TTree>(TType::ExpressionStatement);
 
-	eat(LType::Id);
-	{
-		TTree _tree("id");
-		_tree.emplace_back(token->value);
-		tree->push_back(move(_tree));
-	}
+	taste(LType::Id);
+	tree->emplace_back(token->value);
 
 	eat(LType::Operator);
-	if (token->value == "=")
-	{
-		tree->emplace_back(token->value);
+	compare("=");
+	tree->emplace_back(token->value);
 
-		tree->push_back(move(*expression().release()));
+	tree->push_back(move(*expression().release()));
 
-		eat(LType::Separator);
-		if (token->value == ";")
-		{
-			tree->emplace_back(token->value);
+	eat(LType::Separator);
+	compare(";");
 
-			return tree;
-		}
-	}
-
-	throw runtime_error("");
+	return tree;
 }
