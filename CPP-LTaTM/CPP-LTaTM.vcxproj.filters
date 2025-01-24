@@ -37,4 +37,8 @@
     <ClInclude Include="src\Shell.h" />
     <ClInclude Include="src\Lexer.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="input_1.txt" />
+    <Text Include="input_2.txt" />
+  </ItemGroup>
 </Project>

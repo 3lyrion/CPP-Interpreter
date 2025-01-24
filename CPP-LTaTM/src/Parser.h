@@ -7,7 +7,7 @@ class Parser
 {
 public:
 	using TTree    = Tree<Shell::Token>;
-	using TTreePtr = uptr<TTree>;
+	using TTreePtr = unique_ptr<TTree>;
 
 	Parser() = default;
 
@@ -21,13 +21,6 @@ private:
 
 	size_t m_index{};
 	size_t m_trace{};
-
-	unordered_set<Shell::Token, Shell::Token::Hash> m_exclude =
-	{
-		"const", "program", "block", "statement", "typeSpec",
-		"logic1", "logic2", "logic3", "term", "factor", "power", "operand",
-		"literal", "id", ";"/*, "iterStmt", "selStmt", "printStmt", "exprStmt"*/
-	};
 
 private:
 	void fatalError();

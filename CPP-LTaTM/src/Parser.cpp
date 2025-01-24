@@ -534,11 +534,11 @@ Parser::TTreePtr Parser::exprStmt()
 	auto tree = make_unique<TTree>(TType::ExpressionStatement);
 
 	taste(LType::Id);
-	tree->emplace_back(token->value);
+	tree->emplace_back(token->value, VType::Id);
 
 	eat(LType::Operator);
 	compare("=");
-	tree->emplace_back(token->value);
+	tree->emplace_back(token->value, VType::Operator);
 
 	tree->push_back(move(*expression().release()));
 

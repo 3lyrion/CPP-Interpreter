@@ -1,7 +1,8 @@
 #include "Shell.h"
 
-//#define TRY_CONVERSION(expression) try { expression } catch(exception& e) { print
+#define VALIDATE_COMPATIBILITY(OP) if (rvar.type != lvar.type) throwIncompatibilityError(lvar, rvar, OP);
 
+#define VALIDATE_CONVERSION(EXPRESSION, OP) try { EXPRESSION; } catch (exception& e) { throwConversionError(lvar, rvalue, OP, e); }
 
 void Shell::interpet(Tree<Token>& theTree)
 {
@@ -176,14 +177,14 @@ void Shell::expression(Variable& target)
 
 	auto decl = [this](Token::Value const& value) -> auto&
 	{
-		// Создание копии существующей переменной
+		// Creating a copy of the variable
 		if (value.type == TkValueType::Id)
 		{
 			auto& vi = search(value.text);
 			return declare(vi.type, vi.value);
 		}
 
-		// Создание переменной из литерала
+		// Creating a variable from the literal
 		else
 			return declare(toVIType(value.type), value.text);
 	};
@@ -324,7 +325,6 @@ void Shell::selectionStatement()
 	tree->next(); // expression
 	tree->next(); // )
 
-	// фальш
 	if (get<bool>(var.value) == false)
 	{
 		tree->next(); // {
@@ -579,14 +579,17 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		switch (lvar.type)
 		{
 		case VType::Float:
+		{
+			VALIDATE_COMPATIBILITY("^")
 			get<float>(tvalue) += pow(get<float>(lvalue), get<float>(rvalue));
+		}
 		break;
 
 		case VType::Int:
+		{
+			VALIDATE_COMPATIBILITY("^")
 			get<int>(tvalue) += (int)pow(get<int>(lvalue), get<int>(rvalue));
-		break;
-
-		case VType::String:
+		}
 		break;
 
 		default:
@@ -600,14 +603,17 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		switch (lvar.type)
 		{
 		case VType::Float:
+		{
+			VALIDATE_COMPATIBILITY("*")
 			get<float>(tvalue) += get<float>(lvalue) * get<float>(rvalue);
+		}
 		break;
 
 		case VType::Int:
+		{
+			VALIDATE_COMPATIBILITY("*")
 			get<int>(tvalue) += get<int>(lvalue) * get<int>(rvalue);
-		break;
-
-		case VType::String:
+		}
 		break;
 
 		default:
@@ -621,14 +627,17 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		switch (lvar.type)
 		{
 		case VType::Float:
+		{
+			VALIDATE_COMPATIBILITY("/")
 			get<float>(tvalue) += get<float>(lvalue) / get<float>(rvalue);
+		}
 		break;
 
 		case VType::Int:
+		{
+			VALIDATE_COMPATIBILITY("/")
 			get<int>(tvalue) += get<int>(lvalue) / get<int>(rvalue);
-		break;
-
-		case VType::String:
+		}
 		break;
 
 		default:
@@ -641,14 +650,11 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 	{
 		switch (lvar.type)
 		{
-		case VType::Float:
-		break;
-
 		case VType::Int:
+		{
+			VALIDATE_COMPATIBILITY("%")
 			get<int>(tvalue) += get<int>(lvalue) % get<int>(rvalue);
-		break;
-
-		case VType::String:
+		}
 		break;
 
 		default:
@@ -662,15 +668,24 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		switch (lvar.type)
 		{
 		case VType::Float:
+		{
+			VALIDATE_COMPATIBILITY("+")
 			get<float>(tvalue) += get<float>(lvalue) + get<float>(rvalue);
+		}
 		break;
 
 		case VType::Int:
+		{
+			VALIDATE_COMPATIBILITY("+")
 			get<int>(tvalue) += get<int>(lvalue) + get<int>(rvalue);
+		}
 		break;
 
 		case VType::String:
+		{
+			VALIDATE_COMPATIBILITY("+")
 			get<string>(tvalue) += get<string>(lvalue) + get<string>(rvalue);
+		}
 		break;
 
 		default:
@@ -684,14 +699,17 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		switch (lvar.type)
 		{
 		case VType::Float:
+		{
+			VALIDATE_COMPATIBILITY("-")
 			get<float>(tvalue) += get<float>(lvalue) - get<float>(rvalue);
+		}
 		break;
 
 		case VType::Int:
+		{
+			VALIDATE_COMPATIBILITY("-")
 			get<int>(tvalue) += get<int>(lvalue) - get<int>(rvalue);
-		break;
-
-		case VType::String:
+		}
 		break;
 
 		default:
@@ -720,14 +738,13 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 		switch (lvar.type)
 		{
 		case VType::Float:
-			get<float>(tvalue) += pow(get<float>(lvalue), stof(rvalue));
+			VALIDATE_CONVERSION(get<float>(tvalue) += pow(get<float>(lvalue), stof(rvalue)),
+				"^")
 		break;
 
 		case VType::Int:
-			get<int>(tvalue) += (int)pow(get<int>(lvalue), stoi(rvalue));
-		break;
-
-		case VType::String:
+			VALIDATE_CONVERSION(get<int>(tvalue) += (int)pow(get<int>(lvalue), stoi(rvalue)), 
+				"^")
 		break;
 
 		default:
@@ -741,14 +758,13 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 		switch (lvar.type)
 		{
 		case VType::Float:
-			get<float>(tvalue) += get<float>(lvalue) * stof(rvalue);
+			VALIDATE_CONVERSION(get<float>(tvalue) += get<float>(lvalue) * stof(rvalue),
+				"*")
 		break;
 
 		case VType::Int:
-			get<int>(tvalue) += get<int>(lvalue) * stoi(rvalue);
-		break;
-
-		case VType::String:
+			VALIDATE_CONVERSION(get<int>(tvalue) += get<int>(lvalue) * stoi(rvalue),
+				"*")
 		break;
 
 		default:
@@ -762,14 +778,13 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 		switch (lvar.type)
 		{
 		case VType::Float:
-			get<float>(tvalue) += get<float>(lvalue) / stof(rvalue);
+			VALIDATE_CONVERSION(get<float>(tvalue) += get<float>(lvalue) / stof(rvalue),
+				"/")
 		break;
 
 		case VType::Int:
-			get<int>(tvalue) += get<int>(lvalue) / stoi(rvalue);
-		break;
-
-		case VType::String:
+			VALIDATE_CONVERSION(get<int>(tvalue) += get<int>(lvalue) / stoi(rvalue),
+				"/")
 		break;
 
 		default:
@@ -782,14 +797,9 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 	{
 		switch (lvar.type)
 		{
-		case VType::Float:
-		break;
-
 		case VType::Int:
-			get<int>(tvalue) += get<int>(lvalue) % stoi(rvalue);
-		break;
-
-		case VType::String:
+			VALIDATE_CONVERSION(get<int>(tvalue) += get<int>(lvalue) % stoi(rvalue),
+				"%")
 		break;
 
 		default:
@@ -803,15 +813,18 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 		switch (lvar.type)
 		{
 		case VType::Float:
-			get<float>(tvalue) += get<float>(lvalue) + stof(rvalue);
+			VALIDATE_CONVERSION(get<float>(tvalue) += get<float>(lvalue) + stof(rvalue),
+				"+")
 		break;
 
 		case VType::Int:
-			get<int>(tvalue) += get<int>(lvalue) + stoi(rvalue);
+			VALIDATE_CONVERSION(get<int>(tvalue) += get<int>(lvalue) + stoi(rvalue),
+				"+")
 		break;
 
 		case VType::String:
-			get<string>(tvalue) += get<string>(lvalue) + rvalue;
+			VALIDATE_CONVERSION(get<string>(tvalue) += get<string>(lvalue) + rvalue,
+				"+")
 		break;
 
 		default:
@@ -825,14 +838,13 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 		switch (lvar.type)
 		{
 		case VType::Float:
-			get<float>(tvalue) += get<float>(lvalue) - stof(rvalue);
+			VALIDATE_CONVERSION(get<float>(tvalue) += get<float>(lvalue) - stof(rvalue),
+				"-")
 		break;
 
 		case VType::Int:
-			get<int>(tvalue) += get<int>(lvalue) - stoi(rvalue);
-		break;
-
-		case VType::String:
+			VALIDATE_CONVERSION(get<int>(tvalue) += get<int>(lvalue) - stoi(rvalue),
+				"-")
 		break;
 
 		default:
@@ -861,6 +873,8 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, Variable
 	{
 	case '<':
 	{
+		VALIDATE_COMPATIBILITY(op)
+
 		if (len > 1ull)
 			tvalue = lvalue <= rvalue;
 
@@ -871,6 +885,8 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, Variable
 
 	case '>':
 	{
+		VALIDATE_COMPATIBILITY(op)
+
 		if (len > 1ull)
 			tvalue = lvalue >= rvalue;
 
@@ -881,27 +897,29 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, Variable
 
 	case '=':
 	{
+		VALIDATE_COMPATIBILITY(op)
 		tvalue = lvalue == rvalue;
 	}
 	break;
 
 	case '!':
 	{
+		VALIDATE_COMPATIBILITY(op)
 		tvalue = lvalue != rvalue;
 	}
 	break;
 
 	case '&':
 	{
-		if (lvar.type == VType::Bool)
-			tvalue = get<bool>(lvalue) && get<bool>(rvalue);
+		VALIDATE_COMPATIBILITY(op)
+		tvalue = get<bool>(lvalue) && get<bool>(rvalue);
 	}
 	break;
 
 	case '|':
 	{
-		if (lvar.type == VType::Bool)
-			tvalue = get<bool>(lvalue) || get<bool>(rvalue);
+		VALIDATE_COMPATIBILITY(op)
+		tvalue = get<bool>(lvalue) || get<bool>(rvalue);
 	}
 	break;
 	}
@@ -928,12 +946,13 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 			switch (lvar.type)
 			{
 			case VType::Float:
-				try { tvalue = get<float>(lvalue) <= stof(rvalue); }
-				catch (exception& e) { throwConversionError(lvar, get<float>(lvalue), rvalue, op, e); }
+				VALIDATE_CONVERSION(tvalue = get<float>(lvalue) <= stof(rvalue),
+					op)
 			break;
 
 			case VType::Int:
-				tvalue = get<int>(lvalue) <= stoi(rvalue);
+				VALIDATE_CONVERSION(tvalue = get<int>(lvalue) <= stoi(rvalue),
+					op)
 			break;
 					
 			default:
@@ -944,14 +963,13 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 			switch (lvar.type)
 			{
 			case VType::Float:
-				tvalue = get<float>(lvalue) < stof(rvalue);
+				VALIDATE_CONVERSION(tvalue = get<float>(lvalue) < stof(rvalue);,
+					op)
 			break;
 
 			case VType::Int:
-				tvalue = get<int>(lvalue) < stoi(rvalue);
-			break;
-
-			case VType::String:
+				VALIDATE_CONVERSION(tvalue = get<int>(lvalue) < stoi(rvalue),
+					op)
 			break;
 					
 			default:
@@ -966,14 +984,13 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 			switch (lvar.type)
 			{
 			case VType::Float:
-				tvalue = get<float>(lvalue) >= stof(rvalue);
+				VALIDATE_CONVERSION(tvalue = get<float>(lvalue) >= stof(rvalue),
+					op)
 			break;
 
 			case VType::Int:
-				tvalue = get<int>(lvalue) >= stoi(rvalue);
-			break;
-
-			case VType::String:
+				VALIDATE_CONVERSION(tvalue = get<int>(lvalue) >= stoi(rvalue),
+					op)
 			break;
 					
 			default:
@@ -984,14 +1001,13 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 			switch (lvar.type)
 			{
 			case VType::Float:
-				tvalue = get<float>(lvalue) > stof(rvalue);
+				VALIDATE_CONVERSION(tvalue = get<float>(lvalue) > stof(rvalue),
+					op)
 			break;
 
 			case VType::Int:
-				tvalue = get<int>(lvalue) > stoi(rvalue);
-			break;
-
-			case VType::String:
+				VALIDATE_CONVERSION(tvalue = get<int>(lvalue) > stoi(rvalue),
+					op)
 			break;
 					
 			default:
@@ -1005,19 +1021,23 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 		switch (lvar.type)
 		{
 		case VType::Bool:
-			tvalue = get<bool>(lvalue) == stob(rvalue);
+			VALIDATE_CONVERSION(tvalue = get<bool>(lvalue) == stob(rvalue),
+				op)
 		break;
 
 		case VType::Float:
-			tvalue = get<float>(lvalue) == stof(rvalue);
+			VALIDATE_CONVERSION(tvalue = get<float>(lvalue) == stof(rvalue),
+				op)
 		break;
 
 		case VType::Int:
-			tvalue = get<int>(lvalue) == stoi(rvalue);
+			VALIDATE_CONVERSION(tvalue = get<int>(lvalue) == stoi(rvalue),
+				op)
 		break;
 
 		case VType::String:
-			tvalue = get<string>(lvalue) == rvalue;
+			VALIDATE_CONVERSION(tvalue = get<string>(lvalue) == rvalue,
+				op)
 		break;
 					
 		default:
@@ -1031,19 +1051,23 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 		switch (lvar.type)
 		{
 		case VType::Bool:
-			tvalue = get<bool>(lvalue) != stob(rvalue);
+			VALIDATE_CONVERSION(tvalue = get<bool>(lvalue) != stob(rvalue),
+				op)
 		break;
 
 		case VType::Float:
-			tvalue = get<float>(lvalue) != stof(rvalue);
+			VALIDATE_CONVERSION(tvalue = get<float>(lvalue) != stof(rvalue),
+				op)
 		break;
 
 		case VType::Int:
-			tvalue = get<int>(lvalue) != stoi(rvalue);
+			VALIDATE_CONVERSION(tvalue = get<int>(lvalue) != stoi(rvalue),
+				op)
 		break;
 
 		case VType::String:
-			tvalue = get<string>(lvalue) != rvalue;
+			VALIDATE_CONVERSION(tvalue = get<string>(lvalue) != rvalue,
+				op)
 		break;
 					
 		default:
@@ -1057,7 +1081,8 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 		switch (lvar.type)
 		{
 		case VType::Bool:
-			tvalue = get<bool>(lvalue) && stob(rvalue);
+			VALIDATE_CONVERSION(get<bool>(lvalue) && stob(rvalue),
+				op)
 		break;
 					
 		default:
@@ -1071,7 +1096,8 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 		switch (lvar.type)
 		{
 		case VType::Bool:
-			tvalue = get<bool>(lvalue) || stob(rvalue);
+			VALIDATE_CONVERSION(get<bool>(lvalue) || stob(rvalue),
+				op)
 		break;
 					
 		default:
@@ -1115,7 +1141,6 @@ Shell::ValuePtr Shell::toValue(Token::Value const& tokenValue) const
 
 Shell::Expression Shell::toPostfix(Expression const& infix) const
 {
-	// Функция определения приоритета операторов
 	auto precedence = [](char op)
 	{
 		if (op == '|')
@@ -1168,9 +1193,8 @@ Shell::Expression Shell::toPostfix(Expression const& infix) const
 			}
 
 			if (!operators.empty())
-				operators.pop(); // Убрать '(' из стека
+				operators.pop(); // '('
 		} 
-		// Если токен - оператор
 		else if (pres > 0)
 		{
 			while (!operators.empty() && precedence(operators.top()->text[0]) >= pres)
@@ -1184,7 +1208,6 @@ Shell::Expression Shell::toPostfix(Expression const& infix) const
 		}
 	}
 
-    // Удаление оставшихся операторов из стека
 	while (!operators.empty())
 	{
 		output.push_back(operators.top());
@@ -1193,4 +1216,93 @@ Shell::Expression Shell::toPostfix(Expression const& infix) const
 	}
 
 	return output;
+}
+
+string Shell::toString(VType type) const
+{
+	string out = "bool";
+
+	switch (type)
+	{
+	case VType::Float:
+		out = "float";
+	break;
+
+	case VType::Int:
+		out = "int";
+	break;
+
+	case VType::String:
+		out = "string";
+	break;
+		
+	default:
+		break;
+	}
+
+	return out;
+}
+
+string Shell::getValue(Variable const& var) const
+{
+	switch (var.type)
+	{
+	case VType::Float:	return to_string(get<float>(var.value));
+	case VType::Int:	return to_string(get<int>(var.value));
+	case VType::String:	return get<string>(var.value);
+	default:			return to_string(get<bool>(var.value));
+	}
+}
+
+void Shell::throwConversionError(Variable const& lvar, string const& rvalue, string const& op, exception const& e) const
+{
+	auto print_stack_trace = [&]
+	{
+		if (lvar.id)
+			printf("\tStack trace: %s %s %s\n", lvar.id->c_str(), op.c_str(), rvalue.c_str());
+
+		else
+			cout << ">>> Stack trace: "
+				    << getValue(lvar)	<< ' '
+				    << op				<< ' '
+				    << rvalue			<< '\n';
+	};
+
+	try
+	{
+		dynamic_cast<invalid_argument const&>(e);
+
+		printf("\nThe argument is invalid: %s\n", rvalue.c_str());
+		print_stack_trace();
+						
+	}
+	catch (bad_cast&)
+	{
+		printf("\nThe argument is out of range: %s\n", rvalue.c_str());
+		print_stack_trace();
+	}
+
+	system("pause");
+	exit(EXIT_FAILURE);
+}
+
+void Shell::throwIncompatibilityError(Variable const& lvar, Variable const& rvar, string const& op) const
+{
+	auto ltype = toString(lvar.type);
+
+	if (lvar.id)
+		printf("\n'%s' has an incompatible type: %s\n", lvar.id->c_str(), ltype.c_str());
+
+	else
+		printf("\nThe argument has an incompatible type: %s\n", ltype.c_str());
+
+	cout << ">>> Stack trace: ";
+	if (lvar.id) cout << *lvar.id		<< ' ';
+	else         cout << getValue(lvar)	<< ' ';
+	cout << op << ' ';
+	if (rvar.id) cout << *rvar.id		<< ' ';
+	else         cout << getValue(rvar)	<< '\n';
+
+	system("pause");
+	exit(EXIT_FAILURE);
 }

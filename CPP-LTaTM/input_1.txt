@@ -12,7 +12,6 @@ while (!finish)
 
 	while (i >= 0 && j < 2)
 	{
-		print "Туша";
 		print sum;
 		print FACTOR;
 		print str;

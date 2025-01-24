@@ -214,67 +214,15 @@ private:
 	using Expression = list<Token::Value const*>;
 	Expression toPostfix(Expression const& infix) const;
 
+	string toString(VType type) const;
+
 	bool stob(string const& value) const;
 
-	constexpr void throwConversionError(Variable& lvar, auto const& lvarValue, string const& rvalue, string const& op, exception const& e) const
-	{
-		auto print_stack_trace = [&]
-		{
-			if (lvar.id)
-				printf("Stack trace: %s %s %s\n", lvar.id->c_str(), op.c_str(), rvalue.c_str());
+	string getValue(Variable const& var) const;
 
-			else
-				cout << "Stack trace: "
-				     << lvarValue << ' '
-				     << op        << ' '
-				     << rvalue    << '\n';
-		};
+	void throwConversionError(Variable const& lvar, string const& rvalue, string const& op, exception const& e) const;
 
-		try
-		{
-			dynamic_cast<invalid_argument const&>(e);
-
-			printf("The argument is invalid: %s\n", rvalue.c_str());
-			print_stack_trace();
-						
-		}
-		catch (bad_cast&)
-		{
-			printf("The argument is out of range: %s\n", rvalue.c_str());
-			print_stack_trace();
-		}
-
-		system("pause");
-		exit(EXIT_FAILURE);
-	}
-
-	inline void throwIncompatibilityError(Variable& lvar, auto const& lvarValue, Variable& rvar, auto const& rvarValue, string const& op) const
-	{
-		string type = "bool";
-		switch (rvar.type)
-		{
-		case Variable::Type::Float:
-			type = "float";
-		break;
-
-		case Variable::Type::Int:
-			type = "int";
-		break;
-
-		case Variable::Type::String:
-			type = "string";
-		break;
-		
-		default:
-			break;
-		}
-
-		printf("'%s' has an incompatible type: %s\n", rvar.id->c_str(), type.c_str());
-		printf("Stack trace: %s %s %s\n", lvar.id->c_str(), op.c_str(), rvar.id->c_str());
-
-		system("pause");
-		exit(EXIT_FAILURE);
-	}
+	void throwIncompatibilityError(Variable const& lvar, Variable const& rvar, string const& op) const;
 };
 
 inline ostream& operator << (ostream& os, Shell::Token const& token)

@@ -1,7 +1,7 @@
-~ // Объявление переменных
+// Объявление переменных
 bool finish = false;
 float sum = 5;
-const float FACTOR = 2..;
+const float FACTOR = 2.;
 string str = "Abcdef";
 int count;
 count = 0;

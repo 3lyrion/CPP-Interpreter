@@ -7,13 +7,13 @@ class Tree
 {
 	struct Node
 	{
-		bool visited = false;
+		bool visited{};
 
-		Node* back = nullptr;
+		Node* back{};
 
 		list<Node*> childs;
 
-		T value = T(0);
+		T value{};
 
 		explicit Node(T const& value_, Node* back_ = nullptr) :
 			value (value_),
@@ -281,8 +281,6 @@ private:
 
 			_clear();
 
-			//cout << ch->value << '\n';
-
 			delete ch;
 		}
 	}
@@ -304,57 +302,6 @@ private:
 	template <typename Hash>
 	constexpr void _exclude(Node* node, unordered_set<T, Hash> const& values)
 	{
-		/*auto& childs = node->childs;
-		auto it = remove_if(childs.rbegin(), childs.rend(),
-			[this, node, &values](auto ch)
-			{
-				_exclude(ch, values);
-
-				if (values.contains(ch->value))
-				{
-					for (auto _ch : ch->childs)
-					{
-						_ch->back = node;
-						node->childs.push_back(_ch);
-					}
-
-					delete ch;
-					
-					return true;
-				}
-
-				return false;
-			}
-		);
-
-		childs.erase(it.base(), childs.end());*/
-
-		/*for (auto it = node->childs.rbegin(); it != node->childs.rend(); )
-		{
-			auto ch = *it;
-
-			_exclude(ch, values);
-
-			if (values.contains(ch->value))
-			{
-				for (auto _ch : ch->childs)
-				{
-					_ch->back = node;
-					node->childs.push_back(_ch);
-				}
-
-				delete ch;
-
-				auto _it = it;
-				advance(_it, 1ull);
-					
-				it = decltype(it)(node->childs.erase(_it.base()));
-			}
-
-			else
-				++it;
-		}*/
-
 		node->childs.remove_if(
 			[this, node, &values](auto ch)
 			{
@@ -362,32 +309,15 @@ private:
 
 				if (values.contains(ch->value))
 				{
-					/*auto& childs = ch->childs;
-					for_each(childs.rbegin(), childs.rend(),
-						[node](auto _ch)
-						{
-							_ch->back = node;
-							node->childs.push_front(_ch);
-						}
-					);*/
-
 					for (auto _ch : ch->childs)
-					{
 						_ch->back = node;
 
-
-
-					//	node->childs.push_back(_ch);
-					}
 					auto& childs = node->childs;
 					auto it = find(childs.begin(), childs.end(), ch);
-					//it = childs.erase(it);
 					childs.insert(it, ch->childs.begin(), ch->childs.end());
 
 					delete ch;
 
-
-					
 					return true;
 				}
 
