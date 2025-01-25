@@ -68,8 +68,8 @@ vector<Lexer::Token> const& Lexer::tokenize(fs::path const& path)
 	else
 		throw exception("Cannot open the file");
 
-	m_srcLength = m_src.length();
-	advance();
+	m_srcLength	= m_src.length();
+	m_char		= m_src[0];
 
 	while (eatNextToken());
 
@@ -157,6 +157,9 @@ bool Lexer::eatNextToken()
 		return true;
 	}
 
+	if (hasCharsLeft())
+		throwError("unexpected symbol");
+
 	return false;
 }
 
@@ -182,7 +185,6 @@ size_t Lexer::advance(size_t n)
 	}
 
 	return advanced;
-
 }
 
 char Lexer::peek() const
@@ -236,23 +238,25 @@ void Lexer::skipComment()
 		}
 
 		if (!comment_closed)
-		{
-			ostringstream msg;
-
-			msg << "Syntax error in line "
-				<< m_curLine
-				<< ": multiline comment not closed";
-
-			throw exception(msg.str().c_str());
-			
-		}
+			throwError("multiline comment was not closed");
 	}
 	
-	else
+	else if (m_char == '/')
 	{
 		while (hasCharsLeft() && (m_char != '\n'))
 			advance();
 	}
 
+	else
+		throwError("unexpected symbol");
+
 	skipWhitespace();
+}
+
+void Lexer::throwError(string const& msg) const
+{
+	printf("\nError (l. %d, s. %d): %s\n", m_curLine, m_curSymbol, msg.c_str());
+
+	system("pause");
+	exit(EXIT_FAILURE);
 }

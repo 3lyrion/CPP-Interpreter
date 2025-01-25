@@ -23,7 +23,7 @@ private:
 	size_t m_trace{};
 
 private:
-	void fatalError();
+	void throwError();
 
 	void seek();
 

@@ -80,6 +80,8 @@ private:
 	void skipComment();
 
 	bool eatNextToken();
+
+	void throwError(string const& msg) const;
 };
 
 inline ostream& operator << (ostream& os, Lexer::Token const& token)

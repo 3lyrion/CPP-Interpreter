@@ -12,15 +12,15 @@ Parser::TTreePtr Parser::parse(vector<Lexer::Token> const& theTokens)
 	program(*m_tree);
 
 	if (m_trace < tokens->size() - 1)
-		fatalError();
+		throwError();
 
 	return move(m_tree);
 }
 
-void Parser::fatalError()
+void Parser::throwError()
 {
 	auto& token = (*tokens)[m_trace];
-	printf("Unexpected token (l. %d, s. %d) : '%s'\n", token.line, token.symbol, token.value.c_str());
+	printf("\nUnexpected token (l. %d, s. %d) : '%s'\n", token.line, token.symbol, token.value.c_str());
 
 	system("pause");
 	exit(EXIT_FAILURE);
@@ -57,7 +57,7 @@ void Parser::eat(LType type)
 	seek();
 
 	if (token->type != type)
-		fatalError();
+		throwError();
 }
 
 void Parser::raise()
@@ -69,7 +69,7 @@ void Parser::raise()
 void Parser::compare(string const& value)
 {
 	if (token->value != value)
-		fatalError();
+		throwError();
 }
 
 void Parser::program(TTree& tree)
@@ -363,11 +363,11 @@ void Parser::operand(TTree& tree)
 			return;
 		}
 
-		fatalError();
+		throwError();
 	}
 
 	else if (un)
-		fatalError();
+		throwError();
 
 	throw exception("");
 }
@@ -389,7 +389,7 @@ void Parser::literal(TTree& tree)
 		tree.emplace_back(token->value, VType::BoolLiteral);
 
 	else
-		fatalError();
+		throwError();
 }
 
 void Parser::statement(TTree& tree)
