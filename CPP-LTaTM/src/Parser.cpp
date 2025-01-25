@@ -20,11 +20,9 @@ Parser::TTreePtr Parser::parse(vector<Lexer::Token> const& theTokens)
 void Parser::fatalError()
 {
 	auto& token = (*tokens)[m_trace];
-
 	printf("Unexpected token (l. %d, s. %d) : '%s'\n", token.line, token.symbol, token.value.c_str());
 
 	system("pause");
-
 	exit(EXIT_FAILURE);
 }
 
@@ -141,7 +139,7 @@ Parser::TTreePtr Parser::declaration()
 		taste(LType::Keyword);
 		if (token->value == "const")
 		{
-		//	tree->emplace_back(token->value);
+			tree->emplace_back(token->value);
 
 			typeSpec(*tree);
 

@@ -141,13 +141,14 @@ private:
 		};
 
 		optional<string> id{};
+		bool             constant{};
 		Type             type{};
 		Value            value{};
 
 		inline Variable& operator = (Variable const& var)
 		{
-			type  = var.type;
-			value = var.value;
+			type	= var.type;
+			value	= var.value;
 
 			return *this;
 		}
@@ -184,7 +185,7 @@ private:
 	void initialize(Variable& var);
 	void initialize(Variable& var, string const& value);
 	
-	Variable& declare(string const& id, VType type);
+	Variable& declare(string const& id, VType type, bool constant = false);
 
 	// Temporary variable
 	Variable& declare();
@@ -206,23 +207,26 @@ private:
 	void logicOp(string const& op, Variable& target, Variable& lvar, Variable const& rvar);
 	void logicOp(string const& op, Variable& target, Variable& lvar, string const& rvalue);
 
-	VType toVIType(TkValueType type) const;
-	VType toVIType(char type)        const;
+	VType toVType(TkValueType type) const;
+	VType toVType(char type)        const;
 
 	ValuePtr toValue(Token::Value const& tokenValue) const;
 
 	using Expression = list<Token::Value const*>;
 	Expression toPostfix(Expression const& infix) const;
 
-	string toString(VType type) const;
-
 	bool stob(string const& value) const;
 
-	string getValue(Variable const& var) const;
+	string getType	(Variable const& var) const;
+	string getValue	(Variable const& var) const;
+
+	void throwError(string const& msg) const;
 
 	void throwConversionError(Variable const& lvar, string const& rvalue, string const& op, exception const& e) const;
 
-	void throwIncompatibilityError(Variable const& lvar, Variable const& rvar, string const& op) const;
+	void throwIncompatibilityError(Variable const& var, string const& op)							const;
+	void throwIncompatibilityError(Variable const& lvar, Variable const& rvar, string const& op)	const;
+	void throwIncompatibilityError(Variable const& lvar, string const& rvalue, string const& op)	const;
 };
 
 inline ostream& operator << (ostream& os, Shell::Token const& token)

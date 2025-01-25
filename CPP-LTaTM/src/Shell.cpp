@@ -1,4 +1,4 @@
-#include "Shell.h"
+#include <Shell.h>
 
 #define VALIDATE_COMPATIBILITY(OP) if (rvar.type != lvar.type) throwIncompatibilityError(lvar, rvar, OP);
 
@@ -111,20 +111,29 @@ Shell::Variable& Shell::search(string const& id)
 			return *entry;
 	}
 
-	throw exception("");
+	throw logic_error("");
 }
 
 void Shell::declaration()
 {
 	tree->down();
 
-	auto type = toVIType(tree->get().getValue()->text[0]);
+	bool constant = false;
+
+	auto& first = *tree->get().getValue();
+	if (first.text == "const")
+	{
+		constant = true;
+		tree->next();
+	}
+
+	auto type = toVType(tree->get().getValue()->text[0]);
 
 	tree->next(); // type
 
 	auto& id = tree->get().getValue()->text;
 
-	auto& var_id = declare(id, type);
+	auto& var_id = declare(id, type, constant);
 
 	if (tree->next()) // id
 	{
@@ -180,13 +189,16 @@ void Shell::expression(Variable& target)
 		// Creating a copy of the variable
 		if (value.type == TkValueType::Id)
 		{
-			auto& vi = search(value.text);
-			return declare(vi.type, vi.value);
+			auto& v		= search(value.text);
+			auto& res	= declare(v.type, v.value);
+			res.id		= v.id; // more info for the exceptions
+
+			return res;
 		}
 
 		// Creating a variable from the literal
 		else
-			return declare(toVIType(value.type), value.text);
+			return declare(toVType(value.type), value.text);
 	};
 
 	if (rpn.size() == 1ull)
@@ -198,8 +210,16 @@ void Shell::expression(Variable& target)
 
 		else
 		{
-			target.type = toVIType(value.type);
-			initialize(target, value.text);
+			auto vtype = toVType(value.type);
+
+			if (target.type == VType::Any || target.type == vtype)
+			{
+				target.type = vtype;
+				initialize(target, value.text);
+			}
+
+			else
+				throwIncompatibilityError(target, value.text, "=");
 		}
 	}
 
@@ -252,13 +272,15 @@ void Shell::expressionStatement()
 
 	auto& id = tree->get().getValue()->text;
 
-	auto& var_id = search(id);
+	auto& var = search(id);
+	if (var.constant)
+		throwIncompatibilityError(var, "=");
 
 	tree->next(); // id
 
 	tree->next(); // =
 
-	expression(var_id);
+	expression(var);
 
 	tree->up();
 }
@@ -275,7 +297,6 @@ void Shell::iterationStatement()
 
 	tree->next(); // expression
 
-	// фальш
 	if (get<bool>(var.value) == false)
 		tree->up(); 
 }
@@ -353,22 +374,23 @@ void Shell::closeBlock()
 	m_blocks.pop_back();
 }
 	
-Shell::Variable& Shell::declare(string const& id, VType type)
+Shell::Variable& Shell::declare(string const& id, VType type, bool constant)
 {
 	auto& vars = m_blocks.back();
 
 	try { search(id); }
-	catch (exception&)
+	catch (logic_error&)
 	{
-		auto& var = vars.emplace_back();
-		var.id    = id;
-		var.type  = type;
+		auto& var		= vars.emplace_back();
+		var.id			= id;
+		var.type		= type;
+		var.constant	= constant;
 		initialize(var);
 		
 		return var;
 	}
 
-	throw exception(""); // repeated declaration of the variable
+	throwError("Repeated declaration of the variable: '" + id + '\'');
 }
 
 // Temporary variable
@@ -426,7 +448,7 @@ bool Shell::stob(string const& value) const
 	return false;
 }
 
-Shell::VType Shell::toVIType(TkValueType type) const
+Shell::VType Shell::toVType(TkValueType type) const
 {
 	switch (type)
 	{
@@ -447,7 +469,7 @@ Shell::VType Shell::toVIType(TkValueType type) const
 	}
 }
 
-Shell::VType Shell::toVIType(char type) const
+Shell::VType Shell::toVType(char type) const
 {
 	switch (type)
 	{
@@ -495,26 +517,34 @@ void Shell::initialize(Variable& var)
 
 void Shell::initialize(Variable& var, string const& value)
 {
-	switch (var.type)
+	try
 	{
-	case VType::Bool:
-		var.value.emplace<bool>(stob(value));
-	break;
-
-	case VType::Float:
-		var.value.emplace<float>(stof(value));
-	break;
-
-	case VType::Int:
-		var.value.emplace<int>(stoi(value));
-	break;
-
-	case VType::String:
-		var.value = value;
-	break;
-
-	default:
+		switch (var.type)
+		{
+		case VType::Bool:
+			var.value.emplace<bool>(stob(value));
 		break;
+
+		case VType::Float:
+			var.value.emplace<float>(stof(value));
+		break;
+
+		case VType::Int:
+			var.value.emplace<int>(stoi(value));
+		break;
+
+		case VType::String:
+			var.value = value;
+		break;
+
+		default:
+			break;
+		}
+	}
+	
+	catch (exception& e)
+	{
+		throwConversionError(var, value, "=", e);
 	}
 }
 
@@ -543,7 +573,8 @@ void Shell::unaryOp(char op, Variable& target)
 		break;
 
 		default:
-			break;
+			throwIncompatibilityError(target, "-");
+		break;
 		}
 	}
 	break;
@@ -555,6 +586,9 @@ void Shell::unaryOp(char op, Variable& target)
 			auto& value = get<bool>(tvalue);
 			value = !value;
 		}
+
+		else
+			throwIncompatibilityError(target, "!");
 	}
 	break;
 	}
@@ -581,7 +615,7 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		case VType::Float:
 		{
 			VALIDATE_COMPATIBILITY("^")
-			get<float>(tvalue) += pow(get<float>(lvalue), get<float>(rvalue));
+			get<float>(tvalue) += powf(get<float>(lvalue), get<float>(rvalue));
 		}
 		break;
 
@@ -593,7 +627,8 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		break;
 
 		default:
-			break;
+			throwIncompatibilityError(lvar, rvar, "^");
+		break;
 		}
 	}
 	break;
@@ -617,7 +652,8 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		break;
 
 		default:
-			break;
+			throwIncompatibilityError(lvar, rvar, "*");
+		break;
 		}
 	}
 	break;
@@ -641,7 +677,8 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		break;
 
 		default:
-			break;
+			throwIncompatibilityError(lvar, rvar, "/");
+		break;
 		}
 	}
 	break;
@@ -658,7 +695,8 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		break;
 
 		default:
-			break;
+			throwIncompatibilityError(lvar, rvar, "%");
+		break;
 		}
 	}
 	break;
@@ -689,7 +727,8 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		break;
 
 		default:
-			break;
+			throwIncompatibilityError(lvar, rvar, "+");
+		break;
 		}
 	}
 	break;
@@ -713,7 +752,8 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		break;
 
 		default:
-			break;
+			throwIncompatibilityError(lvar, rvar, "-");
+		break;
 		}
 	}
 	break;
@@ -748,7 +788,8 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 		break;
 
 		default:
-			break;
+			throwIncompatibilityError(lvar, rvalue, "^");
+		break;
 		}
 	}
 	break;
@@ -768,7 +809,8 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 		break;
 
 		default:
-			break;
+			throwIncompatibilityError(lvar, rvalue, "*");
+		break;
 		}
 	}
 	break;
@@ -788,7 +830,8 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 		break;
 
 		default:
-			break;
+			throwIncompatibilityError(lvar, rvalue, "/");
+		break;
 		}
 	}
 	break;
@@ -803,7 +846,8 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 		break;
 
 		default:
-			break;
+			throwIncompatibilityError(lvar, rvalue, "%");
+		break;
 		}
 	}
 	break;
@@ -828,7 +872,8 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 		break;
 
 		default:
-			break;
+			throwIncompatibilityError(lvar, rvalue, "+");
+		break;
 		}
 	}
 	break;
@@ -848,7 +893,8 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 		break;
 
 		default:
-			break;
+			throwIncompatibilityError(lvar, rvalue, "-");
+		break;
 		}
 	}
 	break;
@@ -956,6 +1002,7 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 			break;
 					
 			default:
+				throwIncompatibilityError(lvar, rvalue, "<");
 				break;
 			}
 
@@ -973,6 +1020,7 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 			break;
 					
 			default:
+				throwIncompatibilityError(lvar, rvalue, "<=");
 				break;
 			}
 	}
@@ -994,6 +1042,7 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 			break;
 					
 			default:
+				throwIncompatibilityError(lvar, rvalue, ">=");
 				break;
 			}
 
@@ -1011,6 +1060,7 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 			break;
 					
 			default:
+				throwIncompatibilityError(lvar, rvalue, ">");
 				break;
 			}
 	}
@@ -1086,6 +1136,7 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 		break;
 					
 		default:
+			throwIncompatibilityError(lvar, rvalue, "&");
 			break;
 		}
 	}
@@ -1101,6 +1152,7 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 		break;
 					
 		default:
+			throwIncompatibilityError(lvar, rvalue, "|");
 			break;
 		}
 	}
@@ -1110,7 +1162,7 @@ void Shell::logicOp(string const& op, Variable& target, Variable& lvar, string c
 
 Shell::ValuePtr Shell::toValue(Token::Value const& tokenValue) const
 {
-	auto  type  = toVIType(tokenValue.type);
+	auto  type  = toVType(tokenValue.type);
 	auto& text  = tokenValue.text;
 	auto  value = make_unique<Value>();
 
@@ -1218,11 +1270,11 @@ Shell::Expression Shell::toPostfix(Expression const& infix) const
 	return output;
 }
 
-string Shell::toString(VType type) const
+string Shell::getType(Variable const& var) const
 {
 	string out = "bool";
 
-	switch (type)
+	switch (var.type)
 	{
 	case VType::Float:
 		out = "float";
@@ -1240,6 +1292,9 @@ string Shell::toString(VType type) const
 		break;
 	}
 
+	if (var.constant)
+		out.insert(0, "const ");
+
 	return out;
 }
 
@@ -1254,12 +1309,20 @@ string Shell::getValue(Variable const& var) const
 	}
 }
 
+void Shell::throwError(string const& msg) const
+{
+	printf("\n%s\n", msg.c_str());
+
+	system("pause");
+	exit(EXIT_FAILURE);
+}
+
 void Shell::throwConversionError(Variable const& lvar, string const& rvalue, string const& op, exception const& e) const
 {
 	auto print_stack_trace = [&]
 	{
 		if (lvar.id)
-			printf("\tStack trace: %s %s %s\n", lvar.id->c_str(), op.c_str(), rvalue.c_str());
+			printf(">>> Stack trace: %s %s %s\n", lvar.id->c_str(), op.c_str(), rvalue.c_str());
 
 		else
 			cout << ">>> Stack trace: "
@@ -1286,9 +1349,30 @@ void Shell::throwConversionError(Variable const& lvar, string const& rvalue, str
 	exit(EXIT_FAILURE);
 }
 
+void Shell::throwIncompatibilityError(Variable const& var, string const& op) const
+{
+	auto type = getType(var);
+
+	if (var.id)
+		printf("\n'%s' has an incompatible type: %s\n", var.id->c_str(), type.c_str());
+
+	else
+		printf("\nThe argument has an incompatible type: %s\n", type.c_str());
+
+	cout << ">>> Stack trace: ";
+	if (op[0] != '=')	cout << op				<< ' ';
+	if (var.id)			cout << *var.id			<< ' ';
+	else				cout << getValue(var)	<< ' ';
+	if (op[0] == '=')	cout << op				<< ' ';
+	cout << '\n';
+
+	system("pause");
+	exit(EXIT_FAILURE);
+}
+
 void Shell::throwIncompatibilityError(Variable const& lvar, Variable const& rvar, string const& op) const
 {
-	auto ltype = toString(lvar.type);
+	auto ltype = getType(lvar);
 
 	if (lvar.id)
 		printf("\n'%s' has an incompatible type: %s\n", lvar.id->c_str(), ltype.c_str());
@@ -1302,6 +1386,25 @@ void Shell::throwIncompatibilityError(Variable const& lvar, Variable const& rvar
 	cout << op << ' ';
 	if (rvar.id) cout << *rvar.id		<< ' ';
 	else         cout << getValue(rvar)	<< '\n';
+
+	system("pause");
+	exit(EXIT_FAILURE);
+}
+
+void Shell::throwIncompatibilityError(Variable const& lvar, string const& rvalue, string const& op) const
+{
+	auto ltype = getType(lvar);
+
+	if (lvar.id)
+		printf("\n'%s' has an incompatible type: %s\n", lvar.id->c_str(), ltype.c_str());
+
+	else
+		printf("\nThe argument has an incompatible type: %s\n", ltype.c_str());
+
+	cout << ">>> Stack trace: ";
+	if (lvar.id) cout << *lvar.id		<< ' ';
+	else         cout << getValue(lvar)	<< ' ';
+	cout << op << ' ' << rvalue << '\n';
 
 	system("pause");
 	exit(EXIT_FAILURE);

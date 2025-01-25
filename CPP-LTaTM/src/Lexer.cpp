@@ -69,6 +69,7 @@ vector<Lexer::Token> const& Lexer::tokenize(fs::path const& path)
 		throw exception("Cannot open the file");
 
 	m_srcLength = m_src.length();
+	advance();
 
 	while (eatNextToken());
 
@@ -217,31 +218,24 @@ void Lexer::skipComment()
 	advance();
 
 	auto st_line = m_curLine;
-	bool asterisk_met_first{};
-	bool asterisk_met_sec{};
+	bool comment_closed{};
 
 	if (m_char == '*')
 	{
 		advance();
 
-		while (hasCharsLeft() && !asterisk_met_sec)
+		while (hasCharsLeft() && !comment_closed)
 		{
-			if (m_char == '*')
+			if (m_char == '*' && peek() == '/')
 			{
-				if (!asterisk_met_first)
-					asterisk_met_first = true;
-
-				else if (!asterisk_met_sec && peek() == '/')
-					asterisk_met_sec = true;
+				comment_closed = true;
+				advance();
 			}
-
-			else
-				asterisk_met_first = false;
 
 			advance();
 		}
 
-		if (!asterisk_met_sec)
+		if (!comment_closed)
 		{
 			ostringstream msg;
 
