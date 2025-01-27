@@ -86,21 +86,21 @@ bool Lexer::eatNextToken()
 
 	if (OPERATORS.contains(word))
 	{
-		m_tokens.emplace_back(TkType::Operator, word, m_curLine, m_curSymbol);
+		m_tokens.emplace_back(TkType::Operator, word, m_curLine, m_curColumn);
 		advance(2);
 		return true;
 	}
 
 	if (OPERATORS.contains(symb))
 	{
-		m_tokens.emplace_back(TkType::Operator, symb, m_curLine, m_curSymbol);
+		m_tokens.emplace_back(TkType::Operator, symb, m_curLine, m_curColumn);
 		advance();
 		return true;
 	}
 
 	if (SEPARATORS.contains(symb))
 	{
-		m_tokens.emplace_back(TkType::Separator, symb, m_curLine, m_curSymbol);
+		m_tokens.emplace_back(TkType::Separator, symb, m_curLine, m_curColumn);
 		advance();
 		return true;
 	}
@@ -114,10 +114,10 @@ bool Lexer::eatNextToken()
 		tk_value = result[0];
 
 		if (KEYWORDS.contains(tk_value))
-			m_tokens.emplace_back(TkType::Keyword, tk_value, m_curLine, m_curSymbol);
+			m_tokens.emplace_back(TkType::Keyword, tk_value, m_curLine, m_curColumn);
 				
 		else
-			m_tokens.emplace_back(TkType::Id, tk_value, m_curLine, m_curSymbol);
+			m_tokens.emplace_back(TkType::Id, tk_value, m_curLine, m_curColumn);
 
 		advance(tk_value.size());
 
@@ -128,7 +128,7 @@ bool Lexer::eatNextToken()
 	if (!result.empty())
 	{
 		tk_value = result[0];
-		m_tokens.emplace_back(TkType::FloatLiteral, tk_value, m_curLine, m_curSymbol);
+		m_tokens.emplace_back(TkType::FloatLiteral, tk_value, m_curLine, m_curColumn);
 
 		advance(tk_value.size());
 
@@ -139,7 +139,7 @@ bool Lexer::eatNextToken()
 	if (!result.empty())
 	{
 		tk_value = result[0];
-		m_tokens.emplace_back(TkType::IntLiteral, tk_value, m_curLine, m_curSymbol);
+		m_tokens.emplace_back(TkType::IntLiteral, tk_value, m_curLine, m_curColumn);
 
 		advance(tk_value.size());
 
@@ -150,7 +150,7 @@ bool Lexer::eatNextToken()
 	if (!result.empty())
 	{
 		tk_value = result[0];
-		m_tokens.emplace_back(TkType::StringLiteral, tk_value.substr(1, tk_value.size() - 2ull), m_curLine, m_curSymbol);
+		m_tokens.emplace_back(TkType::StringLiteral, tk_value.substr(1, tk_value.size() - 2ull), m_curLine, m_curColumn);
 
 		advance(tk_value.size());
 
@@ -177,11 +177,11 @@ size_t Lexer::advance(size_t n)
 		if (m_char == '\n')
 		{
 			++m_curLine;
-			m_curSymbol = 0u;
+			m_curColumn = 0u;
 		}
 
 		m_char = m_src[++m_pos];
-		++m_curSymbol;
+		++m_curColumn;
 	}
 
 	return advanced;
@@ -255,7 +255,7 @@ void Lexer::skipComment()
 
 void Lexer::throwError(string const& msg) const
 {
-	printf("\nError (l. %d, s. %d): %s\n", m_curLine, m_curSymbol, msg.c_str());
+	printf("\nError (Ln: %d, Col: %d): %s\n", m_curLine, m_curColumn, msg.c_str());
 
 	system("pause");
 	exit(EXIT_FAILURE);

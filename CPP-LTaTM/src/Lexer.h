@@ -22,7 +22,7 @@ public:
 		Type     type = Type::Separator;
 		string   value;
 		uint32_t line = 0;
-		uint32_t symbol = 0;
+		uint32_t column = 0;
 
 		Token(const char value_[]) : 
 			value  (value_) { }
@@ -30,11 +30,11 @@ public:
 		Token(string const& value_) : 
 			value  (value_) { }
 
-		Token(Type type_, string const& value_, uint32_t line_, uint32_t symbol_) : 
+		Token(Type type_, string const& value_, uint32_t line_, uint32_t column_) : 
 			type   (type_),
 			value  (value_),
 			line   (line_),
-			symbol (symbol_) { }
+			column (column_) { }
 
 		inline bool operator == (Token const& token) const
 		{
@@ -65,7 +65,7 @@ private:
 	char        m_char{};
 	size_t      m_srcLength{};
 	uint32_t	m_curLine	= 1;
-	uint32_t	m_curSymbol	= 0;
+	uint32_t	m_curColumn	= 0;
 	
 	vector<Token> m_tokens;
 

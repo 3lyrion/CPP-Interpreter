@@ -20,7 +20,7 @@ Parser::TTreePtr Parser::parse(vector<Lexer::Token> const& theTokens)
 void Parser::throwError()
 {
 	auto& token = (*tokens)[m_trace];
-	printf("\nUnexpected token (l. %d, s. %d) : '%s'\n", token.line, token.symbol, token.value.c_str());
+	printf("\nUnexpected token (Ln: %d, Col: %d) : '%s'\n", token.line, token.column, token.value.c_str());
 
 	system("pause");
 	exit(EXIT_FAILURE);

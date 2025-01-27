@@ -28,4 +28,5 @@ while (finish == false)
 {
 print "Result";
 print sum;
+print "Русский";
 }

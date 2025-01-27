@@ -1,8 +1,8 @@
-bool finish = false;
-float sum = 5.0 + 7.0 * (10.0 + 7.0) * 10.0;
-const float FACTOR = 2.0;
-int i = 10;
-string str = "Abcdef";
+const	float	FACTOR	= 2.0;
+		bool	finish	= false;
+		float	sum		= 5.0 + 7.0 * (10.0 + 7.0) * 10.0;
+		int		i		= 10;
+		string	str		= "Abcdef";
 
 i = -i + 10;
 
@@ -15,6 +15,7 @@ while (!finish)
 		print sum;
 		print FACTOR;
 		print str;
+		print "!@#$%";
 
 		j = j + 1;
 	}
