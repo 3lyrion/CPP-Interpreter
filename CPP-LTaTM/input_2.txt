@@ -1,4 +1,4 @@
-// Объявление переменных
+// Declarations
 bool finish = false;
 float sum = 5.0;
 const float FACTOR = 2.;
@@ -28,5 +28,4 @@ while (finish == false)
 {
 print "Result";
 print sum;
-print "Русский";
 }
