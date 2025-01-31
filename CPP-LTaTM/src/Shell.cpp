@@ -1463,8 +1463,5 @@ void Shell::_printStackTrace(Tree<Token>::Node& node) const
 
 		else
 			cout << ">>> " << n->value << '\n';
-		
-		/*if (node == var.node)
-			break;*/
 	}
 }

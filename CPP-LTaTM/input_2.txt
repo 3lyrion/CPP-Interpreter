@@ -1,5 +1,5 @@
 // Объявление переменных
-bool finish - false;
+bool finish = false;
 float sum = 5.0;
 const float FACTOR = 2.;
 string str = "Abcdef";
@@ -7,7 +7,7 @@ int count;
 count = 0;
 int d = 5;
 
-if (d % 0 == 0)
+if (d % 2 == 0)
 {
 }
 else
@@ -16,8 +16,8 @@ else
 }
 
 /*
-Цикл
-/
+Loop
+*/
 while (finish == false)
 {
     sum = 5.0+(sum+10.0) * -FACTOR^1.5;

@@ -12,9 +12,6 @@ Parser::TTreePtr Parser::parse(vector<Lexer::Token> const& theTokens)
 	m_tree = make_unique<TTree>("program");
 	program(*m_tree);
 
-	//if (m_trace < tokens->size() - 1)
-	//	throwError();
-
 	return move(m_tree);
 }
 
