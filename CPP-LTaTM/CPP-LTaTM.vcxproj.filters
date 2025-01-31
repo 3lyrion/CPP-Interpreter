@@ -36,6 +36,7 @@
     </ClInclude>
     <ClInclude Include="src\Shell.h" />
     <ClInclude Include="src\Lexer.h" />
+    <ClInclude Include="src\Utility.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="input_1.txt" />

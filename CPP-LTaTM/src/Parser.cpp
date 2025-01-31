@@ -1,6 +1,7 @@
 #include <Parser.h>
 
-using LType = Lexer::Token::Type;
+#include <Utility.h>
+
 using TType = Shell::Token::Type;
 using VType = Shell::Token::Value::Type;
 
@@ -11,19 +12,38 @@ Parser::TTreePtr Parser::parse(vector<Lexer::Token> const& theTokens)
 	m_tree = make_unique<TTree>("program");
 	program(*m_tree);
 
-	if (m_trace < tokens->size() - 1)
-		throwError();
+	//if (m_trace < tokens->size() - 1)
+	//	throwError();
 
 	return move(m_tree);
 }
 
-void Parser::throwError()
+void Parser::throwError(LType expected)
 {
-	auto& token = (*tokens)[m_trace];
-	printf("\nUnexpected token (Ln: %d, Col: %d) : '%s'\n", token.line, token.column, token.value.c_str());
+	util::throwError(
+		[&, this]
+		{
+			auto& token = (*tokens)[m_trace];
+			printf("Ln: %d, Col: %d: unexpected token \'%s\', expected \'",
+				token.line, token.column, token.value.c_str()
+			);
+			cout << expected << "\'\n";
+		}
+	);
+}
 
-	system("pause");
-	exit(EXIT_FAILURE);
+void Parser::throwError(string const& expected)
+{
+	util::throwError(
+		[&, this]
+		{
+			auto& token = (*tokens)[m_trace];
+			printf("Ln: %d, Col: %d: unexpected token \'%s\', expected \'",
+				token.line, token.column, token.value.c_str()
+			);
+			cout << expected << "\'\n";
+		}
+	);
 }
 
 void Parser::seek()
@@ -49,7 +69,7 @@ void Parser::taste(LType type)
 	seek();
 
 	if (token->type != type)
-		throw logic_error("The token type does not match");
+		throw logic_error(""); // The token type does not match
 }
 
 void Parser::eat(LType type)
@@ -57,19 +77,21 @@ void Parser::eat(LType type)
 	seek();
 
 	if (token->type != type)
-		throwError();
+		throwError(type);
+}
+
+void Parser::eat(LType type, string const& value)
+{
+	seek();
+
+	if (token->type != type || token->value != value)
+		throwError(value);
 }
 
 void Parser::raise()
 {
 	m_trace = max(m_trace, m_index);
 	m_index++;
-}
-
-void Parser::compare(string const& value)
-{
-	if (token->value != value)
-		throwError();
 }
 
 void Parser::program(TTree& tree)
@@ -126,8 +148,7 @@ Parser::TTreePtr Parser::declaration()
 			}
 		}
 
-		eat(LType::Separator);
-		compare(";");
+		eat(LType::Separator, ";");
 
 		return tree;
 	}
@@ -146,14 +167,12 @@ Parser::TTreePtr Parser::declaration()
 			eat(LType::Id);
 			tree->emplace_back(token->value);
 
-			eat(LType::Operator);
-			compare("=");
+			eat(LType::Operator, "=");
 			tree->emplace_back(token->value);
 
 			tree->push_back(move(*expression().release()));
 
-			eat(LType::Separator);
-			compare(";");
+			eat(LType::Separator, ";");
 
 			return tree;
 		}
@@ -340,8 +359,7 @@ void Parser::operand(TTree& tree)
 
 			tree.push_back(move(*expression().release()));
 
-			eat(LType::Operator);
-			compare(")");
+			eat(LType::Operator, ")");
 			tree.emplace_back(token->value, VType::Operator);
 
 			return;
@@ -363,11 +381,11 @@ void Parser::operand(TTree& tree)
 			return;
 		}
 
-		throwError();
+		throwError("expression");
 	}
 
 	else if (un)
-		throwError();
+		throwError("expression");
 
 	throw exception("");
 }
@@ -389,7 +407,7 @@ void Parser::literal(TTree& tree)
 		tree.emplace_back(token->value, VType::BoolLiteral);
 
 	else
-		throwError();
+		throwError("literal");
 }
 
 void Parser::statement(TTree& tree)
@@ -430,14 +448,12 @@ Parser::TTreePtr Parser::selStmt()
 	{
 		tree->emplace_back(token->value);
 
-		eat(LType::Operator);
-		compare("(");
+		eat(LType::Operator, "(");
 		tree->emplace_back(token->value);
 
 		tree->push_back(move(*expression().release()));
 
-		eat(LType::Operator);
-		compare(")");
+		eat(LType::Operator, ")");
 		tree->emplace_back(token->value);
 
 		block(*tree);
@@ -470,8 +486,7 @@ void Parser::block(TTree& tree)
 
 		program(tree);
 
-		eat(LType::Separator);
-		compare("}");
+		eat(LType::Separator, "}");
 		tree.emplace_back(token->value);
 
 		return;
@@ -489,14 +504,12 @@ Parser::TTreePtr Parser::iterStmt()
 	{
 		tree->emplace_back(token->value);
 
-		eat(LType::Operator);
-		compare("(");
+		eat(LType::Operator, "(");
 		tree->emplace_back(token->value);
 
 		tree->push_back(move(*expression().release()));
 
-		eat(LType::Operator);
-		compare(")");
+		eat(LType::Operator, ")");
 		tree->emplace_back(token->value);
 
 		block(*tree);
@@ -518,8 +531,7 @@ Parser::TTreePtr Parser::printStmt()
 
 		tree->push_back(move(*expression().release()));
 
-		eat(LType::Separator);
-		compare(";");
+		eat(LType::Separator, ";");
 
 		return tree;
 	}
@@ -534,14 +546,12 @@ Parser::TTreePtr Parser::exprStmt()
 	taste(LType::Id);
 	tree->emplace_back(token->value, VType::Id);
 
-	eat(LType::Operator);
-	compare("=");
+	eat(LType::Operator, "=");
 	tree->emplace_back(token->value, VType::Operator);
 
 	tree->push_back(move(*expression().release()));
 
-	eat(LType::Separator);
-	compare(";");
+	eat(LType::Separator, ";");
 
 	return tree;
 }

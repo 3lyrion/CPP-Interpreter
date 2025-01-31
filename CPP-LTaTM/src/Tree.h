@@ -5,15 +5,13 @@
 template <typename T>
 class Tree
 {
+public:
 	struct Node
 	{
-		bool visited{};
-
-		Node* back{};
-
+		bool		visited{}; // only for printing the tree
+		Node*		back{};
 		list<Node*> childs;
-
-		T value{};
+		T			value{};
 
 		explicit Node(T const& value_, Node* back_ = nullptr) :
 			value (value_),
@@ -23,15 +21,14 @@ class Tree
 			value (forward<decltype(args)>(args)...) { }
 	};
 
-public:
 	Tree() = default;
 
-	Tree(T const& value)
+	explicit Tree(T const& value)
 	{
 		init(value);
 	}
 
-	constexpr Tree(auto&&... args)
+	constexpr explicit Tree(auto&&... args)
 	{
 		init(forward<decltype(args)>(args)...);
 	}
@@ -51,7 +48,8 @@ public:
 
 	constexpr void init(auto&&... args)
 	{
-		if (m_node) return;
+		if (m_node)
+			return;
 
 		m_node = new Node(forward<decltype(args)>(args)...);
 		m_size++;
@@ -59,7 +57,8 @@ public:
 
 	void clear()
 	{
-		if (!m_node) return;
+		if (!m_node)
+			return;
 
 		begin();
 
@@ -67,18 +66,12 @@ public:
 
 		_clear();
 
-		//cout << head->value << '\n';
-
 		delete head;
 	}
 
 	void push_back(T const& value)
 	{
-		auto& childs = m_node->childs;
-		childs.emplace_back(new Node(value));
-
-		childs.back()->back = m_node;
-
+		m_node->childs.emplace_back(new Node(value))->back = m_node;
 		m_size++;
 	}
 
@@ -86,8 +79,7 @@ public:
 	{
 		tree.m_node->back = m_node;
 
-		auto& childs = m_node->childs;
-		childs.emplace_back(tree.m_node);
+		m_node->childs.push_back(tree.m_node);
 
 		tree.m_node = nullptr;
 
@@ -96,11 +88,7 @@ public:
 
 	void push_front(T const& value)
 	{
-		auto& childs = m_node->childs;
-		childs.emplace_front(new Node(value));
-
-		childs.front()->back = m_node;
-
+		m_node->childs.emplace_front(new Node(value))->back = m_node;
 		m_size++;
 	}
 
@@ -109,40 +97,31 @@ public:
 		tree.m_node->back = m_node;
 
 		auto& childs = m_node->childs;
-		childs.emplace_front(tree.m_node);
+		childs.push_back(tree.m_node);
 
 		tree.m_node = nullptr;
 
 		m_size += tree.m_size;
 	}
 
-	constexpr /*T&*/ void emplace_back(auto&&... args)
+	constexpr void emplace_back(auto&&... args)
 	{
-		auto& childs = m_node->childs;
-		auto& b = childs.emplace_back(new Node(forward<decltype(args)>(args)...));
-
+		auto& b = m_node->childs.emplace_back(new Node(forward<decltype(args)>(args)...));
 		b->back = m_node;
 		m_size++;
 
 		/*return b->value;*/
 	}
 
-	constexpr /*T&*/ void emplace_front(auto&&... args)
+	constexpr void emplace_front(auto&&... args)
 	{
-		auto& childs = m_node->childs;
-		auto& f = childs.emplace_front(new Node(forward<decltype(args)>(args)...));
-
+		auto& f = m_node->childs.emplace_front(new Node(forward<decltype(args)>(args)...));
 		f->back = m_node;
 		m_size++;
 
 		/*return f->value;*/
 	}
 
-	T const& get() const
-	{
-		return m_node->value;
-	}
-	
 	void begin()
 	{
 		while (m_node->back)
@@ -247,6 +226,24 @@ public:
 		_exclude(m_node, values);
 	}
 
+	T const& get() const
+	{
+		return m_node->value;
+	}
+
+	T const& get_back() const
+	{
+		if (!m_node->back)
+			throw out_of_range("The node has no ancestor");
+
+		return m_node->back->value;
+	}
+
+	Node* get_node() const
+	{
+		return m_node;
+	}
+
 	size_t size() const
 	{
 		return m_size;
@@ -266,16 +263,14 @@ public:
 	}
 	
 private:
-	Node* m_node = nullptr;
-
-	size_t m_index = 0;
-
-	size_t m_size = 0;
+	Node*	m_node{};
+	size_t	m_index{};
+	size_t	m_size{};
 
 private:
 	void _clear()
 	{
-		for (auto& ch : m_node->childs)
+		for (auto ch : m_node->childs)
 		{
 			m_node = ch;
 

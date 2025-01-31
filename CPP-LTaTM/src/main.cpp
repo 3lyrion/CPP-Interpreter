@@ -41,5 +41,8 @@ int main()
     //    finish = !(count > 100 || sum <= 1.0 && sum >= 0.0);	
     //}
 
-    return 0;
+    //cout << "Result\n";
+    //cout << sum << '\n';
+
+    return EXIT_SUCCESS;
 }

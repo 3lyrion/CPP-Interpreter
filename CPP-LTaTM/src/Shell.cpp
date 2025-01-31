@@ -1,5 +1,7 @@
 #include <Shell.h>
 
+#include <Utility.h>
+
 #define VALIDATE_COMPATIBILITY(OP) if (rvar.type != lvar.type) throwIncompatibilityError(lvar, rvar, OP);
 
 #define VALIDATE_CONVERSION(EXPRESSION, OP) try { EXPRESSION; } catch (exception& e) { throwConversionError(lvar, rvalue, OP, e); }
@@ -373,15 +375,16 @@ void Shell::closeBlock()
 {
 	m_blocks.pop_back();
 }
-	
+
+#pragma warning(push)
+#pragma warning(disable: 4715)
 Shell::Variable& Shell::declare(string const& id, VType type, bool constant)
 {
-	auto& vars = m_blocks.back();
-
 	try { search(id); }
 	catch (logic_error&)
 	{
-		auto& var		= vars.emplace_back();
+		auto& var		= m_blocks.back().emplace_back();
+		var.node		= tree->get_node();
 		var.id			= id;
 		var.type		= type;
 		var.constant	= constant;
@@ -392,14 +395,14 @@ Shell::Variable& Shell::declare(string const& id, VType type, bool constant)
 
 	throwError("Repeated declaration of the variable: '" + id + '\'');
 }
+#pragma warning(pop)
 
 // Temporary variable
 Shell::Variable& Shell::declare()
 {
-	auto& vars = m_blocks.back();
-
-	auto& var = vars.emplace_back();
-	var.type  = VType::Any;
+	auto& var	= m_blocks.back().emplace_back();
+	var.node	= tree->get_node();
+	var.type	= VType::Any;
 
 	return var;
 }
@@ -407,10 +410,9 @@ Shell::Variable& Shell::declare()
 // Temporary variable
 Shell::Variable& Shell::declare(VType type)
 {
-	auto& vars = m_blocks.back();
-
-	auto& var = vars.emplace_back();
-	var.type  = type;
+	auto& var	= m_blocks.back().emplace_back();
+	var.node	= tree->get_node();
+	var.type	= type;
 	initialize(var);
 		
 	return var;
@@ -419,10 +421,9 @@ Shell::Variable& Shell::declare(VType type)
 // Temporary variable
 Shell::Variable& Shell::declare(VType type, string const& value)
 {
-	auto& vars = m_blocks.back();
-
-	auto& var = vars.emplace_back();
-	var.type  = type;
+	auto& var	= m_blocks.back().emplace_back();
+	var.node	= tree->get_node();
+	var.type	= type;
 	initialize(var, value);
 		
 	return var;
@@ -431,11 +432,10 @@ Shell::Variable& Shell::declare(VType type, string const& value)
 // Temporary variable
 Shell::Variable& Shell::declare(VType type, Value const& value)
 {
-	auto& vars = m_blocks.back();
-
-	auto& var = vars.emplace_back();
-	var.type  = type;
-	var.value = value;
+	auto& var	= m_blocks.back().emplace_back();
+	var.node	= tree->get_node();
+	var.type	= type;
+	var.value	= value;
 
 	return var;
 }
@@ -665,6 +665,11 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		case VType::Float:
 		{
 			VALIDATE_COMPATIBILITY("/")
+
+			auto _rvalue = get<float>(rvalue);
+			if (_rvalue == 0.0f)
+				throwError(lvar, "Cannot divide by 0");
+
 			get<float>(tvalue) += get<float>(lvalue) / get<float>(rvalue);
 		}
 		break;
@@ -672,6 +677,11 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		case VType::Int:
 		{
 			VALIDATE_COMPATIBILITY("/")
+
+			auto _rvalue = get<int>(rvalue);
+			if (_rvalue == 0)
+				throwError(lvar, "Cannot divide by 0");
+
 			get<int>(tvalue) += get<int>(lvalue) / get<int>(rvalue);
 		}
 		break;
@@ -690,7 +700,12 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, Variable const& 
 		case VType::Int:
 		{
 			VALIDATE_COMPATIBILITY("%")
-			get<int>(tvalue) += get<int>(lvalue) % get<int>(rvalue);
+
+			auto _rvalue = get<int>(rvalue);
+			if (_rvalue == 0)
+				throwError(lvar, "Cannot modulus by 0");
+
+			get<int>(tvalue) += get<int>(lvalue) % _rvalue;
 		}
 		break;
 
@@ -820,13 +835,29 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 		switch (lvar.type)
 		{
 		case VType::Float:
-			VALIDATE_CONVERSION(get<float>(tvalue) += get<float>(lvalue) / stof(rvalue),
-				"/")
+		{
+			auto _rvalue = 0.0f;
+			try { _rvalue = stof(rvalue); }
+			catch (exception& e) { throwConversionError(lvar, rvalue, "/", e); }
+
+			if (_rvalue == 0.0f)
+				throwError(lvar, "Cannot divide by 0");
+
+			get<float>(tvalue) += get<float>(lvalue) / _rvalue;
+		}
 		break;
 
 		case VType::Int:
-			VALIDATE_CONVERSION(get<int>(tvalue) += get<int>(lvalue) / stoi(rvalue),
-				"/")
+		{
+			auto _rvalue = 0;
+			try { _rvalue = stoi(rvalue); }
+			catch (exception& e) { throwConversionError(lvar, rvalue, "/", e); }
+
+			if (_rvalue == 0)
+				throwError(lvar, "Cannot divide by 0");
+
+			get<int>(tvalue) += get<int>(lvalue) / _rvalue;
+		}
 		break;
 
 		default:
@@ -841,8 +872,16 @@ void Shell::arithmOp(char op, Variable& target, Variable& lvar, string const& rv
 		switch (lvar.type)
 		{
 		case VType::Int:
-			VALIDATE_CONVERSION(get<int>(tvalue) += get<int>(lvalue) % stoi(rvalue),
-				"%")
+		{
+			auto _rvalue = 0;
+			try { _rvalue = stoi(rvalue); }
+			catch (exception& e) { throwConversionError(lvar, rvalue, "%", e); }
+
+			if (_rvalue == 0)
+				throwError(lvar, "Cannot modulus by 0");
+
+			get<int>(tvalue) += get<int>(lvalue) % _rvalue;
+		}
 		break;
 
 		default:
@@ -1309,103 +1348,123 @@ string Shell::getValue(Variable const& var) const
 	}
 }
 
+void Shell::printStackTrace(Variable const& var) const
+{
+	cout << "Stack trace:\n";
+	_printStackTrace(*var.node->back);
+}
+
 void Shell::throwError(string const& msg) const
 {
-	printf("\n%s\n", msg.c_str());
+	util::throwError(
+		[&, this]
+		{
+			cout << msg << '\n';
+		}
+	);
+}
 
-	system("pause");
-	exit(EXIT_FAILURE);
+void Shell::throwError(Variable const& var, string const& msg) const
+{
+	util::throwError(
+		[&, this]
+		{
+			cout << msg << '\n';
+			printStackTrace(var);
+		}
+	);
 }
 
 void Shell::throwConversionError(Variable const& lvar, string const& rvalue, string const& op, exception const& e) const
 {
-	auto print_stack_trace = [&]
-	{
-		if (lvar.id)
-			printf(">>> Stack trace: %s %s %s\n", lvar.id->c_str(), op.c_str(), rvalue.c_str());
+	util::throwError(
+		[&, this]
+		{
+			try
+			{
+				dynamic_cast<invalid_argument const&>(e);
 
-		else
-			cout << ">>> Stack trace: "
-				    << getValue(lvar)	<< ' '
-				    << op				<< ' '
-				    << rvalue			<< '\n';
-	};
-
-	try
-	{
-		dynamic_cast<invalid_argument const&>(e);
-
-		printf("\nThe argument is invalid: %s\n", rvalue.c_str());
-		print_stack_trace();
+				printf("The argument is invalid: %s\n", rvalue.c_str());
+				printStackTrace(lvar);
 						
-	}
-	catch (bad_cast&)
-	{
-		printf("\nThe argument is out of range: %s\n", rvalue.c_str());
-		print_stack_trace();
-	}
-
-	system("pause");
-	exit(EXIT_FAILURE);
+			}
+			catch (bad_cast&)
+			{
+				printf("The argument is out of range: %s\n", rvalue.c_str());
+				printStackTrace(lvar);
+			}
+		}
+	);
 }
 
 void Shell::throwIncompatibilityError(Variable const& var, string const& op) const
 {
-	auto type = getType(var);
+	util::throwError(
+		[&, this]
+		{
+			auto type = getType(var);
 
-	if (var.id)
-		printf("\n'%s' has an incompatible type: %s\n", var.id->c_str(), type.c_str());
+			if (var.id)
+				printf("\'%s\' has an incompatible type: %s\n", var.id->c_str(), type.c_str());
 
-	else
-		printf("\nThe argument has an incompatible type: %s\n", type.c_str());
+			else
+				printf("The argument has an incompatible type: %s\n", type.c_str());
 
-	cout << ">>> Stack trace: ";
-	if (op[0] != '=')	cout << op				<< ' ';
-	if (var.id)			cout << *var.id			<< ' ';
-	else				cout << getValue(var)	<< ' ';
-	if (op[0] == '=')	cout << op				<< ' ';
-	cout << '\n';
-
-	system("pause");
-	exit(EXIT_FAILURE);
+			printStackTrace(var);
+		}
+	);
 }
 
 void Shell::throwIncompatibilityError(Variable const& lvar, Variable const& rvar, string const& op) const
 {
-	auto ltype = getType(lvar);
+	util::throwError(
+		[&, this]
+		{
+			auto ltype = getType(lvar);
 
-	if (lvar.id)
-		printf("\n'%s' has an incompatible type: %s\n", lvar.id->c_str(), ltype.c_str());
+			if (lvar.id)
+				printf("'%s' has an incompatible type: %s\n", lvar.id->c_str(), ltype.c_str());
 
-	else
-		printf("\nThe argument has an incompatible type: %s\n", ltype.c_str());
+			else
+				printf("The argument has an incompatible type: %s\n", ltype.c_str());
 
-	cout << ">>> Stack trace: ";
-	if (lvar.id) cout << *lvar.id		<< ' ';
-	else         cout << getValue(lvar)	<< ' ';
-	cout << op << ' ';
-	if (rvar.id) cout << *rvar.id		<< ' ';
-	else         cout << getValue(rvar)	<< '\n';
-
-	system("pause");
-	exit(EXIT_FAILURE);
+			printStackTrace(lvar);
+		}
+	);
 }
 
 void Shell::throwIncompatibilityError(Variable const& lvar, string const& rvalue, string const& op) const
 {
-	auto ltype = getType(lvar);
+	util::throwError(
+		[&, this]
+		{
+			auto ltype = getType(lvar);
 
-	if (lvar.id)
-		printf("\n'%s' has an incompatible type: %s\n", lvar.id->c_str(), ltype.c_str());
+			if (lvar.id)
+				printf("'%s' has an incompatible type: %s\n", lvar.id->c_str(), ltype.c_str());
 
-	else
-		printf("\nThe argument has an incompatible type: %s\n", ltype.c_str());
+			else
+				printf("The argument has an incompatible type: %s\n", ltype.c_str());
 
-	cout << ">>> Stack trace: ";
-	if (lvar.id) cout << *lvar.id		<< ' ';
-	else         cout << getValue(lvar)	<< ' ';
-	cout << op << ' ' << rvalue << '\n';
+			printStackTrace(lvar);
+		}
+	);
+}
 
-	system("pause");
-	exit(EXIT_FAILURE);
+void Shell::_printStackTrace(Tree<Token>::Node& node) const
+{
+	for (auto n : node.childs)
+	{
+		if (auto type = n->value.getType())
+		{
+			if (*type == Token::Type::Expression)
+				_printStackTrace(*n);
+		}
+
+		else
+			cout << ">>> " << n->value << '\n';
+		
+		/*if (node == var.node)
+			break;*/
+	}
 }

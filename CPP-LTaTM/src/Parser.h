@@ -17,25 +17,26 @@ private:
 	vector<Lexer::Token> const* tokens{};
 	Lexer::Token         const* token{};
 
-	TTreePtr m_tree{};
-
-	size_t m_index{};
-	size_t m_trace{};
+	TTreePtr	m_tree{};
+	size_t		m_index{};
+	size_t		m_trace{};
 
 private:
-	void throwError();
+	using LType = Lexer::Token::Type;
+
+	void throwError(LType expected);
+	void throwError(string const& expected);
 
 	void seek();
 
 	Lexer::Token const* peek();
 
-	void taste(Lexer::Token::Type type);
+	void taste(LType type);
 
-	void eat(Lexer::Token::Type type);
+	void eat(LType type);
+	void eat(LType type, string const& value);
 
 	void raise();
-
-	void compare(string const& value);
 
 private:
 	void program(TTree& tree);

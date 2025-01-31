@@ -10,31 +10,31 @@ public:
 	public:
 		enum class Type
 		{
-			Id = 0,
+			Separator = 0,
+			Id,
 			Operator,
 			FloatLiteral,
 			IntLiteral,
 			StringLiteral,
-			Separator,
 			Keyword
 		};
 
-		Type     type = Type::Separator;
+		Type     type{};
 		string   value;
-		uint32_t line = 0;
-		uint32_t column = 0;
+		uint32_t line{};
+		uint32_t column{};
 
 		Token(const char value_[]) : 
-			value  (value_) { }
+			value(value_) { }
 
 		Token(string const& value_) : 
-			value  (value_) { }
+			value(value_) { }
 
 		Token(Type type_, string const& value_, uint32_t line_, uint32_t column_) : 
-			type   (type_),
-			value  (value_),
-			line   (line_),
-			column (column_) { }
+			type	(type_),
+			value	(value_),
+			line	(line_),
+			column	(column_) { }
 
 		inline bool operator == (Token const& token) const
 		{
@@ -51,6 +51,8 @@ public:
 
 			return false;
 		}
+
+		friend ostream& operator << (ostream&, Token::Type const&);
 	
 		friend ostream& operator << (ostream&, Token const&);
 	};
@@ -83,6 +85,47 @@ private:
 
 	void throwError(string const& msg) const;
 };
+
+inline ostream& operator << (ostream& os, Lexer::Token::Type const& type)
+{
+	using LType = Lexer::Token::Type;
+
+	switch (type)
+	{
+	case LType::FloatLiteral:
+		os << "float_literal";
+	break;
+
+	case LType::Id:
+		os << "id";
+	break;
+
+	case LType::IntLiteral:
+		os << "int_literal";
+	break;
+
+	case LType::Keyword:
+		os << "keyword";
+	break;
+
+	case LType::Operator:
+		os << "operator";
+	break;
+
+	case LType::Separator:
+		os << "separator";
+	break;
+
+	case LType::StringLiteral:
+		os << "string_literal";
+	break;
+
+	default:
+		break;
+	}
+
+	return os;
+}
 
 inline ostream& operator << (ostream& os, Lexer::Token const& token)
 {

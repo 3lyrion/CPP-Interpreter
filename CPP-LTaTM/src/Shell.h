@@ -126,7 +126,7 @@ public:
 	void interpet(Tree<Token>& theTree);
 
 private:
-	using Value    = variant<bool, int, float, string>; // 48 bytes ()()()()
+	using Value    = variant<bool, int, float, string>; // 48 bytes = sizeof(string) + sizeof(size_t)
 	using ValuePtr = unique_ptr<Value>;
 
 	struct Variable
@@ -140,10 +140,11 @@ private:
 			String
 		};
 
-		optional<string> id{};
-		bool             constant{};
-		Type             type{};
-		Value            value{};
+		Tree<Token>::Node*	node{};
+		optional<string>	id{};		// not for temporary variables
+		bool				constant{};
+		Type				type{};
+		Value				value{};
 
 		inline Variable& operator = (Variable const& var)
 		{
@@ -220,13 +221,19 @@ private:
 	string getType	(Variable const& var) const;
 	string getValue	(Variable const& var) const;
 
-	void throwError(string const& msg) const;
+	void printStackTrace(Variable const& var) const;
+
+	void throwError(string const& msg)						const;
+	void throwError(Variable const& var, string const& msg)	const;
 
 	void throwConversionError(Variable const& lvar, string const& rvalue, string const& op, exception const& e) const;
 
 	void throwIncompatibilityError(Variable const& var, string const& op)							const;
 	void throwIncompatibilityError(Variable const& lvar, Variable const& rvar, string const& op)	const;
 	void throwIncompatibilityError(Variable const& lvar, string const& rvalue, string const& op)	const;
+
+private:
+	void _printStackTrace(Tree<Token>::Node& node) const;
 };
 
 inline ostream& operator << (ostream& os, Shell::Token const& token)

@@ -1,5 +1,7 @@
 #include <Lexer.h>
 
+#include <Utility.h>
+
 #include <regex>
 
 using TkType = Lexer::Token::Type;
@@ -66,7 +68,7 @@ vector<Lexer::Token> const& Lexer::tokenize(fs::path const& path)
 	}
 
 	else
-		throw exception("Cannot open the file");
+		throw runtime_error("Cannot open the file");
 
 	m_srcLength	= m_src.length();
 	m_char		= m_src[0];
@@ -255,8 +257,10 @@ void Lexer::skipComment()
 
 void Lexer::throwError(string const& msg) const
 {
-	printf("\nError (Ln: %d, Col: %d): %s\n", m_curLine, m_curColumn, msg.c_str());
-
-	system("pause");
-	exit(EXIT_FAILURE);
+	util::throwError(
+		[&, this]
+		{
+			printf("Ln: %d, Col: %d: %s\n", m_curLine, m_curColumn, msg.c_str());
+		}
+	);
 }
